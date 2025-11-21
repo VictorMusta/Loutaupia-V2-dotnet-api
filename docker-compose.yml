@@ -1,0 +1,68 @@
+﻿version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: loutaupia-postgres
+    environment:
+      POSTGRES_DB: loutaupia_db
+      POSTGRES_USER: loutaupia_admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-YourSecurePassword123!}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loutaupia_admin -d loutaupia_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - loutaupia-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: loutaupia-backend
+    ports:
+      - "5000:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=loutaupia_db;Username=loutaupia_admin;Password=${DB_PASSWORD:-YourSecurePassword123!}"
+      Jwt__Secret: ${JWT_SECRET:-YourSuperSecretKeyForJWTTokenGenerationThatIsAtLeast32CharactersLong}
+      Jwt__Issuer: "LoutaupiaV2API"
+      Jwt__Audience: "LoutaupiaV2Client"
+      Cors__AllowedOrigins: "http://localhost:3000,http://frontend:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - loutaupia-network
+
+  # Frontend service (à implémenter plus tard)
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: loutaupia-frontend
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     REACT_APP_API_URL: "http://localhost:5000"
+  #   depends_on:
+  #     - backend
+  #   restart: unless-stopped
+  #   networks:
+  #     - loutaupia-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  loutaupia-network:
+    driver: bridge
+

@@ -1,0 +1,6 @@
+﻿namespace Loutaupia_V2_dotnet_api.Core.Contracts.Services;
+public interface IPasswordHasher
+{
+    string HashPassword(string password);
+    bool VerifyPassword(string password, string passwordHash);
+}
