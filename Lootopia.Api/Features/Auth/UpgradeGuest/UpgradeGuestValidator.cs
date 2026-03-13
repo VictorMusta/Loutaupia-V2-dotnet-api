@@ -1,0 +1,24 @@
+using FluentValidation;
+
+namespace Lootopia.Api.Features.Auth.UpgradeGuest;
+
+public sealed class UpgradeGuestValidator : AbstractValidator<UpgradeGuestCommand>
+{
+    public UpgradeGuestValidator()
+    {
+        RuleFor(x => x.UserId)
+            .NotEmpty().WithMessage("User ID is required.");
+
+        RuleFor(x => x.Email)
+            .NotEmpty().WithMessage("Email is required.")
+            .EmailAddress().WithMessage("Invalid email format.");
+
+        RuleFor(x => x.Password)
+            .NotEmpty().WithMessage("Password is required.")
+            .MinimumLength(8).WithMessage("Password must be at least 8 characters.");
+
+        RuleFor(x => x.DisplayName)
+            .NotEmpty().WithMessage("Display name is required.")
+            .MaximumLength(100).WithMessage("Display name must not exceed 100 characters.");
+    }
+}
