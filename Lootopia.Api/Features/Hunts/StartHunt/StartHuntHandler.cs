@@ -11,6 +11,10 @@ public sealed class StartHuntHandler(LootopiaDbContext db) : IRequestHandler<Sta
 {
     public async Task<Result<StartHuntResponse>> Handle(StartHuntCommand request, CancellationToken cancellationToken)
     {
+        var playerExists = await db.Users.AnyAsync(u => u.Id == request.PlayerId, cancellationToken);
+        if (!playerExists)
+            return Result.Failure<StartHuntResponse>(Error.Custom("Auth.UserNotFound", "Player not found. Please log in again."));
+
         var hunt = await db.Hunts
             .Include(h => h.Steps.OrderBy(s => s.StepOrder))
             .FirstOrDefaultAsync(h => h.Id == request.HuntId, cancellationToken);

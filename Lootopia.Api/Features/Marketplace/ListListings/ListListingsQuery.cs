@@ -9,4 +9,5 @@ public record ListListingsQuery(
     ItemRarity? Rarity,
     string? Sort,
     int Page,
-    int Size) : IRequest<Result<ListListingsResponse>>;
+    int Size,
+    Guid? SellerId = null) : IRequest<Result<ListListingsResponse>>;

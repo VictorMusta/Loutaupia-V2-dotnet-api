@@ -1,0 +1,313 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Package, ShoppingCart, Plus } from "lucide-react";
+import { Card, CardContent } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Badge } from "@/shared/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/shared/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/shared/components/ui/dialog";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { marketplaceApi } from "@/shared/api/marketplace";
+import { inventoryApi } from "@/shared/api/inventory";
+import { useToast } from "@/shared/components/ui/toast";
+import { formatCurrency } from "@/shared/lib/utils";
+
+const RARITY_COLORS: Record<string, string> = {
+  Common: "bg-slate-500",
+  Rare: "bg-blue-600",
+  Epic: "bg-purple-600",
+  Legendary: "bg-amber-500",
+};
+
+export function MarketplacePage() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [confirmListing, setConfirmListing] = useState<{
+    id: string;
+    itemName: string;
+    price: number;
+  } | null>(null);
+  const [sellItemId, setSellItemId] = useState("");
+  const [sellPrice, setSellPrice] = useState("");
+
+  const { data: listings, isLoading: listingsLoading } = useQuery({
+    queryKey: ["marketplace", "listings"],
+    queryFn: () => marketplaceApi.listings(),
+  });
+
+  const { data: myListings, isLoading: myListingsLoading } = useQuery({
+    queryKey: ["marketplace", "myListings"],
+    queryFn: () => marketplaceApi.myListings(),
+  });
+
+  const { data: inventory } = useQuery({
+    queryKey: ["inventory"],
+    queryFn: () => inventoryApi.list({ size: 100 }),
+  });
+
+  const purchaseMutation = useMutation({
+    mutationFn: (listingId: string) => marketplaceApi.purchase(listingId),
+    onSuccess: () => {
+      setConfirmListing(null);
+      queryClient.invalidateQueries({ queryKey: ["marketplace"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      toast({ title: "Achat réussi", variant: "success" });
+    },
+    onError: (err) => {
+      toast({
+        title: "Erreur",
+        description: err instanceof Error ? err.message : "Achat impossible",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: ({ itemId, price }: { itemId: string; price: number }) =>
+      marketplaceApi.create(itemId, price),
+    onSuccess: () => {
+      setSellItemId("");
+      setSellPrice("");
+      queryClient.invalidateQueries({ queryKey: ["marketplace"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      toast({ title: "Article mis en vente", variant: "success" });
+    },
+    onError: (err) => {
+      toast({
+        title: "Erreur",
+        description: err instanceof Error ? err.message : "Impossible de vendre",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSell = () => {
+    const price = parseFloat(sellPrice);
+    if (!sellItemId || isNaN(price) || price <= 0) {
+      toast({
+        title: "Erreur",
+        description: "Sélectionnez un objet et un prix valide.",
+        variant: "destructive",
+      });
+      return;
+    }
+    createMutation.mutate({ itemId: sellItemId, price });
+  };
+
+  const tradeableItems = inventory?.items?.filter((i) => i.isTradeable) ?? [];
+
+  return (
+    <div className="h-full flex flex-col gap-4 p-4 bg-slate-950 overflow-y-auto">
+      <h1 className="text-xl font-bold text-foreground">Marché</h1>
+
+      <Tabs defaultValue="buy" className="flex-1">
+        <TabsList className="grid w-full grid-cols-2 bg-muted">
+          <TabsTrigger value="buy">Acheter</TabsTrigger>
+          <TabsTrigger value="sell">Mes Ventes</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="buy" className="mt-4 space-y-4">
+          {listingsLoading ? (
+            <div className="grid grid-cols-1 gap-3">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-24 rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {listings?.length === 0 ? (
+                <div className="py-12 text-center text-muted-foreground">
+                  Aucune vente en cours
+                </div>
+              ) : (
+                listings?.map((listing) => (
+                  <Card
+                    key={listing.id}
+                    className="border-border bg-card/80 flex flex-row overflow-hidden"
+                  >
+                    <div className="w-20 h-20 bg-muted shrink-0 flex items-center justify-center">
+                      <Package className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 p-4 flex flex-col justify-between min-w-0">
+                      <div>
+                        <p className="font-medium text-foreground truncate">
+                          {listing.itemName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Par {listing.sellerName}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge
+                          className={
+                            RARITY_COLORS[listing.itemRarity] ?? "bg-muted"
+                          }
+                          variant="secondary"
+                        >
+                          {listing.itemRarity}
+                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-primary">
+                            {formatCurrency(listing.price)}
+                          </span>
+                          <Button
+                            size="sm"
+                            className="bg-primary hover:bg-primary/90"
+                            onClick={() =>
+                              setConfirmListing({
+                                id: listing.id,
+                                itemName: listing.itemName,
+                                price: listing.price,
+                              })
+                            }
+                          >
+                            <ShoppingCart className="h-4 w-4 mr-1" />
+                            Acheter
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="sell" className="mt-4 space-y-4">
+          <Card className="border-border bg-card/80">
+            <CardContent className="p-4 space-y-4">
+              <h3 className="font-semibold text-foreground">
+                Mettre en vente
+              </h3>
+              <div>
+                <label className="text-sm text-muted-foreground block mb-2">
+                  Objet
+                </label>
+                <select
+                  value={sellItemId}
+                  onChange={(e) => setSellItemId(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Sélectionner...</option>
+                  {tradeableItems.map((item) => (
+                    <option key={item.itemId} value={item.itemId}>
+                      {item.name} ({item.rarity})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground block mb-2">
+                  Prix (LTK)
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="0"
+                  value={sellPrice}
+                  onChange={(e) => setSellPrice(e.target.value)}
+                />
+              </div>
+              <Button
+                className="w-full bg-primary hover:bg-primary/90"
+                onClick={handleSell}
+                disabled={createMutation.isPending}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Mettre en vente
+              </Button>
+            </CardContent>
+          </Card>
+
+          {myListingsLoading ? (
+            <Skeleton className="h-32 rounded-xl" />
+          ) : (
+            <div className="space-y-3">
+              <h3 className="font-semibold text-foreground">Mes annonces</h3>
+              {myListings?.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Aucune annonce active
+                </p>
+              ) : (
+                myListings?.map((listing) => (
+                  <Card
+                    key={listing.id}
+                    className="border-border bg-card/80 p-4 flex flex-row items-center justify-between"
+                  >
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {listing.itemName}
+                      </p>
+                      <p className="text-sm text-primary font-semibold">
+                        {formatCurrency(listing.price)}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          await marketplaceApi.cancel(listing.id);
+                          queryClient.invalidateQueries({
+                            queryKey: ["marketplace"],
+                          });
+                          toast({ title: "Annonce annulée", variant: "success" });
+                        } catch {
+                          toast({
+                            title: "Erreur",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      Annuler
+                    </Button>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={!!confirmListing} onOpenChange={() => setConfirmListing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer l&apos;achat</DialogTitle>
+            <DialogDescription>
+              {confirmListing && (
+                <>
+                  Acheter {confirmListing.itemName} pour{" "}
+                  {formatCurrency(confirmListing.price)} ?
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmListing(null)}>
+              Annuler
+            </Button>
+            <Button
+              className="bg-primary"
+              onClick={() =>
+                confirmListing && purchaseMutation.mutate(confirmListing.id)
+              }
+              disabled={purchaseMutation.isPending}
+            >
+              Confirmer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
