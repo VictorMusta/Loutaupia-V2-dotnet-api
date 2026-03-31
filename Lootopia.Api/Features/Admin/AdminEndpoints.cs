@@ -1,12 +1,15 @@
 using Lootopia.Api.Features.Admin.CreditPartnerBudget;
 using Lootopia.Api.Features.Admin.FreezeCampaign;
 using Lootopia.Api.Features.Admin.FreezeUser;
+using Lootopia.Api.Features.Admin.GetActivityReport;
 using Lootopia.Api.Features.Admin.GetFraudAlerts;
+using Lootopia.Api.Features.Admin.ListUsers;
 using Lootopia.Api.Features.Admin.UnfreezeUser;
 using Lootopia.Api.SharedKernel.Results;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using HttpResults = Microsoft.AspNetCore.Http.Results;
 
@@ -60,6 +63,36 @@ public static class AdminEndpoints
         .WithTags("Admin")
         .RequireAuthorization(policy => policy.RequireRole("Admin"))
         .WithName("CreditPartnerBudget");
+
+        app.MapGet("/api/admin/users", async (
+            [FromQuery] int page,
+            [FromQuery] int size,
+            [FromQuery] string? search,
+            IMediator mediator) =>
+        {
+            var result = await mediator.Send(new ListUsersQuery(
+                page > 0 ? page : 1,
+                size > 0 ? Math.Min(size, 100) : 20,
+                search));
+            return result.ToHttpResult();
+        })
+        .WithTags("Admin")
+        .RequireAuthorization(policy => policy.RequireRole("Admin"))
+        .WithName("ListUsers");
+
+        app.MapGet("/api/admin/report", async (
+            [FromQuery] string? from,
+            [FromQuery] string? to,
+            IMediator mediator) =>
+        {
+            var dateFrom = DateTime.TryParse(from, out var f) ? f : DateTime.UtcNow.AddDays(-30);
+            var dateTo = DateTime.TryParse(to, out var t) ? t.AddDays(1) : DateTime.UtcNow.AddDays(1);
+            var result = await mediator.Send(new GetAdminReportQuery(dateFrom, dateTo));
+            return result.ToHttpResult();
+        })
+        .WithTags("Admin")
+        .RequireAuthorization(policy => policy.RequireRole("Admin"))
+        .WithName("GetActivityReport");
     }
 
     private record CreditRequest(decimal Amount);

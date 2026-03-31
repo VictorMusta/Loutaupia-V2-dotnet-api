@@ -25,3 +25,9 @@ docker-compose.override.yml
 ## EF Core
 *.mdf
 *.ldf
+
+
+_bmad/
+_bmad_output/
+.agent/
+.claude/

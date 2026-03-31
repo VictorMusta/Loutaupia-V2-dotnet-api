@@ -12,10 +12,13 @@ public sealed class ListListingsHandler(LootopiaDbContext db) : IRequestHandler<
         CancellationToken cancellationToken)
     {
         var query = db.Listings
-            .Where(l => l.Status == "Active")
             .Include(l => l.Item)
             .AsQueryable();
 
+        if (request.SellerId.HasValue)
+            query = query.Where(l => l.SellerId == request.SellerId.Value);
+        else
+            query = query.Where(l => l.Status == "Active");
         if (request.Type.HasValue)
             query = query.Where(l => l.Item.Type == request.Type.Value);
         if (request.Rarity.HasValue)

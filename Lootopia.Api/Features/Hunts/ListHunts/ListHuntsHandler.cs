@@ -46,8 +46,11 @@ public sealed class ListHuntsHandler(
 
         var items = hunts.Select(h =>
         {
-            var nearestStep = nearestStepPerHunt.FirstOrDefault(s => s.HuntId == h.Id);
-            var stepPoint = nearestStep?.Location;
+            var firstStep = nearestStepPerHunt
+                .Where(s => s.HuntId == h.Id)
+                .OrderBy(s => s.StepOrder)
+                .FirstOrDefault();
+            var stepPoint = firstStep?.Location;
             var distanceKm = stepPoint != null
                 ? geoValidator.CalculateDistanceInMeters(playerPoint, stepPoint) / 1000
                 : 0;
@@ -58,7 +61,10 @@ public sealed class ListHuntsHandler(
                 h.Difficulty,
                 h.StepCount,
                 h.RewardTokens,
-                Math.Round(distanceKm, 2));
+                Math.Round(distanceKm, 2),
+                firstStep?.Location.Y ?? 0,
+                firstStep?.Location.X ?? 0,
+                "Active");
         })
         .OrderBy(x => x.DistanceKm)
         .ToList();

@@ -39,6 +39,12 @@ public static class MarketplaceEndpoints
             .AllowAnonymous()
             .Produces<ListListings.ListListingsResponse>(StatusCodes.Status200OK);
 
+        group.MapGet("/listings/mine", ListMyListings)
+            .WithName("ListMyListings")
+            .WithSummary("List current user's listings")
+            .RequireAuthorization()
+            .Produces<ListListings.ListListingsResponse>(StatusCodes.Status200OK);
+
         group.MapPost("/listings/{listingId:guid}/cancel", CancelListing)
             .WithName("CancelListing")
             .WithSummary("Cancel a listing (auth required, owner only)")
@@ -93,6 +99,22 @@ public static class MarketplaceEndpoints
         var itemRarity = Enum.TryParse<ItemRarity>(rarity, true, out var r) ? r : (ItemRarity?)null;
 
         var result = await mediator.Send(new ListListingsQuery(itemType, itemRarity, sort, page, size), cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> ListMyListings(
+        ClaimsPrincipal user,
+        [FromServices] IMediator mediator,
+        [FromQuery] int page = 1,
+        [FromQuery] int size = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = GetUserId(user);
+        if (userId is null)
+            return HttpResults.Unauthorized();
+
+        var result = await mediator.Send(
+            new ListListingsQuery(null, null, "created_desc", page, size, userId), cancellationToken);
         return result.ToHttpResult();
     }
 

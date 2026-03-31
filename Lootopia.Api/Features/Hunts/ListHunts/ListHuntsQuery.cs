@@ -14,4 +14,7 @@ public record HuntListItem(
     int Difficulty,
     int StepCount,
     decimal RewardTokens,
-    double DistanceKm);
+    double DistanceKm,
+    double Latitude,
+    double Longitude,
+    string Status);

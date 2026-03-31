@@ -119,6 +119,7 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync();
     await DataSeeder.SeedAsync(db);
     await DataSeeder.SeedAchievementsAsync(db);
+    await DataSeeder.SeedTestDataAsync(db);
 }
 
 // --- Health Check Endpoint ---
