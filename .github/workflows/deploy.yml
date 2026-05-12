@@ -42,14 +42,14 @@ jobs:
       - name: 🛡️ Add VPS to Known Hosts
         run: ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      # Exemple A : Déploiement des fichiers statiques du front vers Nginx/Apache sur le VPS
-      - name: 📂 Deploy Frontend Assets to VPS
+      # Intégration directe du Frontend React dans le wwwroot du Backend .NET
+      - name: 📥 Inject Frontend into Backend wwwroot
         run: |
-          rsync -avz --delete ./Lootopia.Client/dist/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/lootopia/client/
+          mkdir -p ./Lootopia.Api/wwwroot
+          cp -r ./Lootopia.Client/dist/* ./Lootopia.Api/wwwroot/
 
-      # Exemple B : Rechargement du Backend sur le VPS (via Docker Compose)
-      # Si votre VPS héberge le backend via Docker, on copie les sources ou le docker-compose et on relance
-      - name: 🐳 Copy Backend & Infrastructure Files
+      # Transfert du code global unifié vers le VPS
+      - name: 🐳 Copy Unified Backend & Infrastructure Files
         run: |
           rsync -avz --exclude='bin/' --exclude='obj/' --exclude='node_modules/' ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/lootopia/
 
