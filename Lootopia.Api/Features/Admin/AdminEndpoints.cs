@@ -85,8 +85,8 @@ public static class AdminEndpoints
             [FromQuery] string? to,
             IMediator mediator) =>
         {
-            var dateFrom = DateTime.TryParse(from, out var f) ? f : DateTime.UtcNow.AddDays(-30);
-            var dateTo = DateTime.TryParse(to, out var t) ? t.AddDays(1) : DateTime.UtcNow.AddDays(1);
+            var dateFrom = DateTime.TryParse(from, out var f) ? DateTime.SpecifyKind(f, DateTimeKind.Utc) : DateTime.UtcNow.AddDays(-30);
+            var dateTo = DateTime.TryParse(to, out var t) ? DateTime.SpecifyKind(t, DateTimeKind.Utc).AddDays(1) : DateTime.UtcNow.AddDays(1);
             var result = await mediator.Send(new GetAdminReportQuery(dateFrom, dateTo));
             return result.ToHttpResult();
         })

@@ -20,30 +20,30 @@ public sealed class GetAdminReportHandler(LootopiaDbContext db)
         var pendingAlerts = await db.FraudAlerts
             .CountAsync(a => a.Status == FraudAlertStatus.New, cancellationToken);
 
-        var registrationsData = await db.Users
+        var createdDates = await db.Users
             .Where(u => u.CreatedAt >= request.From && u.CreatedAt <= request.To)
-            .GroupBy(u => u.CreatedAt.Date)
-            .Select(g => new { Date = g.Key, Count = g.Count() })
-            .OrderBy(d => d.Date)
+            .Select(u => u.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        var registrations = registrationsData
+        var registrations = createdDates
+            .GroupBy(d => d.Date)
             .Select(g => new DayCount(
-                g.Date.ToString("yyyy-MM-dd"),
-                g.Count))
+                g.Key.ToString("yyyy-MM-dd"),
+                g.Count()))
+            .OrderBy(d => d.Date)
             .ToList();
 
-        var completions = await db.PlayerHunts
+        var completedDates = await db.PlayerHunts
             .Where(ph => ph.Status == PlayerHuntStatus.Completed
                          && ph.CompletedAt != null
                          && ph.CompletedAt >= request.From
                          && ph.CompletedAt <= request.To)
+            .Select(ph => ph.CompletedAt!.Value)
             .ToListAsync(cancellationToken);
 
-        var weeklyCompletions = completions
-            .GroupBy(ph =>
+        var weeklyCompletions = completedDates
+            .GroupBy(d =>
             {
-                var d = ph.CompletedAt!.Value;
                 var cal = System.Globalization.CultureInfo.InvariantCulture.Calendar;
                 var week = cal.GetWeekOfYear(d, System.Globalization.CalendarWeekRule.FirstFourDayWeek,
                     DayOfWeek.Monday);

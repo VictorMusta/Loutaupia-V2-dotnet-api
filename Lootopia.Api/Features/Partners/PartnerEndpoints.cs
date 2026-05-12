@@ -30,8 +30,8 @@ public static class PartnerEndpoints
             if (partner is null)
                 return HttpResults.Json(new { code = "Partner.NotFound", description = "Partner not found." }, statusCode: 403);
 
-            var fromDate = from ?? DateTime.UtcNow.AddDays(-30);
-            var toDate = to ?? DateTime.UtcNow;
+            var fromDate = from.HasValue ? DateTime.SpecifyKind(from.Value, DateTimeKind.Utc) : DateTime.UtcNow.AddDays(-30);
+            var toDate = to.HasValue ? DateTime.SpecifyKind(to.Value, DateTimeKind.Utc) : DateTime.UtcNow;
 
             var result = await mediator.Send(new GetActivityReportQuery(partner.Id, fromDate, toDate));
             return result.ToHttpResult();
