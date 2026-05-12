@@ -106,6 +106,10 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// --- Static Files (React Frontend) ---
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -158,6 +162,9 @@ app.MapMarketplaceEndpoints();
 
 // --- Trading Endpoints ---
 app.MapTradingEndpoints();
+
+// --- SPA Fallback Routing ---
+app.MapFallbackToFile("index.html");
 
 app.Run();
 
