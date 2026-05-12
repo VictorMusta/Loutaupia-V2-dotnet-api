@@ -20,14 +20,18 @@ public sealed class GetAdminReportHandler(LootopiaDbContext db)
         var pendingAlerts = await db.FraudAlerts
             .CountAsync(a => a.Status == FraudAlertStatus.New, cancellationToken);
 
-        var registrations = await db.Users
+        var registrationsData = await db.Users
             .Where(u => u.CreatedAt >= request.From && u.CreatedAt <= request.To)
             .GroupBy(u => u.CreatedAt.Date)
-            .Select(g => new DayCount(
-                g.Key.ToString("yyyy-MM-dd"),
-                g.Count()))
+            .Select(g => new { Date = g.Key, Count = g.Count() })
             .OrderBy(d => d.Date)
             .ToListAsync(cancellationToken);
+
+        var registrations = registrationsData
+            .Select(g => new DayCount(
+                g.Date.ToString("yyyy-MM-dd"),
+                g.Count))
+            .ToList();
 
         var completions = await db.PlayerHunts
             .Where(ph => ph.Status == PlayerHuntStatus.Completed
