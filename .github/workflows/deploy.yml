@@ -1,0 +1,67 @@
+name: CI/CD Deployment to VPS
+
+on:
+  push:
+    branches:
+      - master
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🚀 Checkout Repository
+        uses: actions/checkout@v4
+
+      # --- 1. BUILD FRONTEND (React / Vite) ---
+      - name: ⚡ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: Lootopia.Client/package-lock.json
+
+      - name: 📦 Install Frontend Dependencies
+        run: npm ci
+        working-directory: ./Lootopia.Client
+
+      - name: 🏗️ Build Frontend
+        run: npm run build
+        working-directory: ./Lootopia.Client
+        env:
+          VITE_API_URL: /api # Ajustez si l'API est sur un sous-domaine dédié
+
+      # --- 2. DEPLOYMENT VIA SSH / RSYNC ---
+      - name: 🔑 Install SSH Key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: unnecessary # géré dynamiquement ci-dessous avec ssh-keyscan
+
+      - name: 🛡️ Add VPS to Known Hosts
+        run: ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      # Exemple A : Déploiement des fichiers statiques du front vers Nginx/Apache sur le VPS
+      - name: 📂 Deploy Frontend Assets to VPS
+        run: |
+          rsync -avz --delete ./Lootopia.Client/dist/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/lootopia/client/
+
+      # Exemple B : Rechargement du Backend sur le VPS (via Docker Compose)
+      # Si votre VPS héberge le backend via Docker, on copie les sources ou le docker-compose et on relance
+      - name: 🐳 Copy Backend & Infrastructure Files
+        run: |
+          rsync -avz --exclude='bin/' --exclude='obj/' --exclude='node_modules/' ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/lootopia/
+
+      - name: 🔄 Restart Application Infrastructure on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/lootopia
+            # Lance les conteneurs (Postgres + API .NET) en arrière-plan
+            docker compose up -d --build
+            # Nettoyage des anciennes images inutilisées
+            docker image prune -f

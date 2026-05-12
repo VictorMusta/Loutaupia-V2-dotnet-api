@@ -192,51 +192,130 @@ export function HuntPlayPage() {
     : [48.8566, 2.3522] as [number, number];
 
   return (
-    <div className="h-full flex flex-col bg-slate-950 pb-safe">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 pb-2">
-        <h1 className="text-lg font-semibold text-foreground truncate">
-          {playerHunt.huntTitle}
-        </h1>
-        <span className="text-sm text-muted-foreground shrink-0 ml-2">
-          Étape {playerHunt.currentStep} / {playerHunt.steps.length}
-        </span>
-        <Button
-          variant={debugMode ? "default" : "ghost"}
-          size="sm"
-          className={debugMode ? "ml-2 bg-amber-500 hover:bg-amber-600 text-black font-bold h-8 px-2.5" : "ml-2 text-muted-foreground hover:text-foreground h-8 px-2.5"}
-          onClick={toggleDebugMode}
-        >
-          <Bug className="h-4 w-4" />
-        </Button>
-      </div>
+    <div className="h-full flex flex-col md:flex-row bg-slate-950 pb-safe relative overflow-hidden">
+      {/* Sidebar/Panel containing clues and actions */}
+      <div className="w-full md:w-[400px] shrink-0 flex flex-col bg-card/95 md:bg-card/90 backdrop-blur border-t md:border-t-0 md:border-r border-border z-20 shadow-2xl order-2 md:order-1 overflow-y-auto max-h-[55vh] md:max-h-full">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 pb-2">
+          <h1 className="text-base sm:text-lg font-semibold text-foreground truncate">
+            {playerHunt.huntTitle}
+          </h1>
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="text-xs sm:text-sm text-muted-foreground ml-2">
+              Étape {playerHunt.currentStep} / {playerHunt.steps.length}
+            </span>
+            <Button
+              variant={debugMode ? "default" : "ghost"}
+              size="sm"
+              className={debugMode ? "ml-1 bg-amber-500 hover:bg-amber-600 text-black font-bold h-7 w-7 p-0" : "ml-1 text-muted-foreground hover:text-foreground h-7 w-7 p-0"}
+              onClick={toggleDebugMode}
+            >
+              <Bug className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
 
-      {/* Progress bar */}
-      <div className="px-4 pb-3">
-        <div className="flex gap-1">
-          {playerHunt.steps.map((s) => (
-            <div
-              key={s.order}
-              className={`h-1.5 flex-1 rounded-full transition-colors ${
-                s.validated
-                  ? "bg-green-500"
-                  : s.order === playerHunt.currentStep
-                    ? "bg-primary"
-                    : "bg-muted"
-              }`}
-            />
-          ))}
+        {/* Progress bar */}
+        <div className="px-4 pb-3 shrink-0">
+          <div className="flex gap-1">
+            {playerHunt.steps.map((s) => (
+              <div
+                key={s.order}
+                className={`h-1.5 flex-1 rounded-full transition-colors ${
+                  s.validated
+                    ? "bg-green-500"
+                    : s.order === playerHunt.currentStep
+                      ? "bg-primary"
+                      : "bg-muted"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Distance indicator */}
+        {currentStep && (
+          <div className="px-4 mt-1 shrink-0">
+            <Card className="border-border bg-card/60 shadow-sm">
+              <CardContent className="py-2.5 px-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Navigation className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-medium text-muted-foreground">Distance</span>
+                </div>
+                {distance !== null ? (
+                  <span className={`text-base font-bold ${distanceColor(distance, currentStep.radiusMeters)}`}>
+                    {formatDistance(distance)}
+                  </span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Localisation...</span>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Clue */}
+        <div className="flex-1 px-4 mt-3 min-h-[120px]">
+          <Card className="border-border bg-card/60 h-full flex flex-col shadow-inner">
+            <CardContent className="p-3.5 flex-1 flex flex-col gap-2">
+              <div className="flex items-center gap-2 border-b border-border/50 pb-2">
+                <MapPin className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-sm font-semibold text-foreground">Indice de l'étape</span>
+              </div>
+              {currentStep && (
+                <div className="flex-1 overflow-y-auto pr-1">
+                  <p className="text-foreground/95 leading-relaxed text-xs sm:text-sm font-medium">
+                    {currentStep.clue}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Validate button */}
+        <div className="p-4 shrink-0 mt-auto bg-card/50 border-t border-border/30">
+          <Button
+            className="w-full h-11 sm:h-12 bg-primary hover:bg-primary/90 text-sm sm:text-base font-bold shadow-lg transition-all active:scale-[0.98]"
+            disabled={!position || validateMutation.isPending || stepValidated}
+            onClick={() => {
+              if (position && currentStep) {
+                setStepValidated(false);
+                validateMutation.mutate({
+                  stepOrder: currentStep.order,
+                  lat: position.lat,
+                  lng: position.lng,
+                });
+              }
+            }}
+          >
+            {validateMutation.isPending ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                Validation en cours...
+              </span>
+            ) : stepValidated ? (
+              <>
+                <CheckCircle2 className="h-5 w-5 mr-2" />
+                Étape validée !
+              </>
+            ) : (
+              <>
+                <MapPin className="h-5 w-5 mr-2" />
+                Valider ma position
+              </>
+            )}
+          </Button>
         </div>
       </div>
 
-      {/* Map */}
-      {currentStep && (
-        <div className="mx-4 h-48 rounded-xl overflow-hidden border border-border">
+      {/* Map Area */}
+      <div className="flex-1 relative h-[45vh] md:h-full w-full z-10 order-1 md:order-2">
+        {currentStep && (
           <MapContainer
             center={mapCenter}
             zoom={16}
             className="h-full w-full"
-            style={{ minHeight: 192 }}
             zoomControl={false}
           >
             <TileLayer
@@ -256,80 +335,12 @@ export function HuntPlayPage() {
               <PlayerSprite lat={position.lat} lng={position.lng} heading={heading} />
             )}
           </MapContainer>
+        )}
+
+        {/* Quick hint tag overlay on mobile corner */}
+        <div className="absolute top-3 left-3 z-[1000] bg-background/90 backdrop-blur py-1 px-2.5 rounded-md border border-border shadow-md md:hidden pointer-events-none">
+          <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Carte en direct</span>
         </div>
-      )}
-
-      {/* Distance indicator */}
-      {currentStep && (
-        <div className="mx-4 mt-3">
-          <Card className="border-border bg-card/80">
-            <CardContent className="py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Navigation className="h-5 w-5 text-primary" />
-                <span className="text-sm text-muted-foreground">Distance</span>
-              </div>
-              {distance !== null ? (
-                <span className={`text-lg font-bold ${distanceColor(distance, currentStep.radiusMeters)}`}>
-                  {formatDistance(distance)}
-                </span>
-              ) : (
-                <span className="text-sm text-muted-foreground">Localisation...</span>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Clue */}
-      <div className="flex-1 mx-4 mt-3 min-h-0">
-        <Card className="border-border bg-card/80 h-full flex flex-col">
-          <CardContent className="py-4 flex-1 flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-primary shrink-0" />
-              <span className="font-semibold text-foreground">Indice</span>
-            </div>
-            {currentStep && (
-              <p className="text-foreground/90 leading-relaxed text-sm">
-                {currentStep.clue}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Validate button */}
-      <div className="p-4 pt-3">
-        <Button
-          className="w-full h-12 bg-primary hover:bg-primary/90 text-base"
-          disabled={!position || validateMutation.isPending || stepValidated}
-          onClick={() => {
-            if (position && currentStep) {
-              setStepValidated(false);
-              validateMutation.mutate({
-                stepOrder: currentStep.order,
-                lat: position.lat,
-                lng: position.lng,
-              });
-            }
-          }}
-        >
-          {validateMutation.isPending ? (
-            <span className="flex items-center gap-2">
-              <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-              Validation...
-            </span>
-          ) : stepValidated ? (
-            <>
-              <CheckCircle2 className="h-5 w-5 mr-2" />
-              Étape validée !
-            </>
-          ) : (
-            <>
-              <MapPin className="h-5 w-5 mr-2" />
-              Valider l'étape
-            </>
-          )}
-        </Button>
       </div>
 
       {/* Debug banner */}
