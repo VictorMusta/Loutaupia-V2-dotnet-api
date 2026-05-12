@@ -13,14 +13,11 @@ public sealed class GetActivityReportHandler(LootopiaDbContext db) : IRequestHan
         if (partner is null)
             return Result.Failure<GetActivityReportResponse>(Error.Custom("Partner.NotFound", "Partner not found."));
 
-        var campaignIds = await db.Campaigns
+        var campaigns = await db.Campaigns
             .Where(c => c.PartnerId == request.PartnerId)
-            .Select(c => c.Id)
             .ToListAsync(cancellationToken);
 
-        var couponsDistributed = await db.Campaigns
-            .Where(c => c.PartnerId == request.PartnerId)
-            .SumAsync(c => c.CouponsDistributed, cancellationToken);
+        var campaignIds = campaigns.Select(c => c.Id).ToList();
 
         var totalPlayers = 0;
         if (campaignIds.Count > 0)
@@ -33,15 +30,17 @@ public sealed class GetActivityReportHandler(LootopiaDbContext db) : IRequestHan
                 .CountAsync(cancellationToken);
         }
 
-        var budgetConsumed = await db.Campaigns
-            .Where(c => c.PartnerId == request.PartnerId)
-            .SumAsync(c => c.CouponsDistributed * c.TokenBudget / Math.Max(c.MaxCoupons, 1), cancellationToken);
+        var couponsDistributed = campaigns.Sum(c => c.CouponsDistributed);
+        var activeCampaigns = campaigns.Count(c => c.Status == Domain.Enums.CampaignStatus.Active);
 
-        var budgetRemaining = partner.TokenBudget - budgetConsumed;
+        var totalSpent = campaigns.Sum(c => c.MaxCoupons > 0
+            ? (c.CouponsDistributed * c.TokenBudget / c.MaxCoupons)
+            : 0);
+
+        var budgetRemaining = partner.TokenBudget - totalSpent;
         if (budgetRemaining < 0) budgetRemaining = 0;
 
-        var campaignStats = await db.Campaigns
-            .Where(c => c.PartnerId == request.PartnerId)
+        var campaignStats = campaigns
             .Select(c => new CampaignStatDto(
                 c.Id,
                 c.Title,
@@ -49,11 +48,21 @@ public sealed class GetActivityReportHandler(LootopiaDbContext db) : IRequestHan
                 c.CouponsDistributed,
                 c.MaxCoupons,
                 c.TokenBudget))
-            .ToListAsync(cancellationToken);
+            .ToList();
+
+        var period = new ReportPeriodDto(
+            request.From.ToString("yyyy-MM-dd"),
+            request.To.ToString("yyyy-MM-dd"));
 
         return Result.Success(new GetActivityReportResponse(
-            totalPlayers,
+            partner.Id,
+            partner.BusinessName,
+            partner.TokenBudget,
+            totalSpent,
+            activeCampaigns,
             couponsDistributed,
+            period,
+            totalPlayers,
             budgetRemaining,
             campaignStats));
     }
