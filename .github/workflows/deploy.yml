@@ -23,7 +23,7 @@ jobs:
           cache-dependency-path: Lootopia.Client/package-lock.json
 
       - name: 📦 Install Frontend Dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
         working-directory: ./Lootopia.Client
 
       - name: 🏗️ Build Frontend
