@@ -25,6 +25,7 @@ interface GeoContextValue {
   stopTracking: () => void;
   toggleDebugMode: () => void;
   moveDebug: (dlat: number, dlng: number) => void;
+  setDebugPositionAbsolute: (lat: number, lng: number) => void;
 }
 
 const GeoContext = createContext<GeoContextValue | null>(null);
@@ -62,6 +63,15 @@ export function GeolocationProvider({ children }: { children: ReactNode }) {
       };
     });
   }, [realPosition]);
+
+  const setDebugPositionAbsolute = useCallback((lat: number, lng: number) => {
+    setDebugPosition({
+      lat,
+      lng,
+      accuracy: 1,
+      timestamp: Date.now(),
+    });
+  }, []);
 
   const toggleDebugMode = useCallback(() => {
     setDebugMode((prev) => {
@@ -184,6 +194,7 @@ export function GeolocationProvider({ children }: { children: ReactNode }) {
     stopTracking,
     toggleDebugMode,
     moveDebug,
+    setDebugPositionAbsolute,
   };
 
   return <GeoContext.Provider value={value}>{children}</GeoContext.Provider>;

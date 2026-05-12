@@ -92,7 +92,7 @@ public static class AdminEndpoints
         })
         .WithTags("Admin")
         .RequireAuthorization(policy => policy.RequireRole("Admin"))
-        .WithName("GetActivityReport");
+        .WithName("GetAdminActivityReport");
     }
 
     private record CreditRequest(decimal Amount);

@@ -21,59 +21,73 @@ public static class DataSeeder
 
     public static async Task SeedAsync(LootopiaDbContext context)
     {
-        if (await context.Users.AnyAsync())
-            return;
-
-        var adminUser = new User
+        var adminUser = await context.Users.FirstOrDefaultAsync(u => u.Id == AdminId);
+        if (adminUser == null)
         {
-            Id = AdminId,
-            Email = "admin@lootopia.io",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
-            DisplayName = "Master Admin",
-            Role = UserRole.Admin,
-            IsGuest = false,
-            IsActive = true
-        };
-
-        var partnerUser = new User
+            adminUser = new User
+            {
+                Id = AdminId,
+                Email = "admin@gmail.com",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin"),
+                DisplayName = "admin",
+                Role = UserRole.Admin,
+                IsGuest = false,
+                IsActive = true
+            };
+            context.Users.Add(adminUser);
+            context.Wallets.Add(new Wallet { Id = Guid.NewGuid(), UserId = adminUser.Id, Balance = 999999 });
+        }
+        else
         {
-            Id = PartnerId,
-            Email = "partner@lootopia.io",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Partner123!"),
-            DisplayName = "Jean-Pierre Boulanger",
-            Role = UserRole.Partner,
-            IsGuest = false,
-            IsActive = true
-        };
+            // If the admin user already exists, just update their credentials
+            adminUser.Email = "admin@gmail.com";
+            adminUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin");
+            adminUser.DisplayName = "admin";
+        }
 
-        var playerUser = new User
+        var partnerUser = await context.Users.FirstOrDefaultAsync(u => u.Id == PartnerId);
+        if (partnerUser == null)
         {
-            Id = PlayerId,
-            Email = "player@lootopia.io",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Player123!"),
-            DisplayName = "Lucas le Gamer",
-            Role = UserRole.Player,
-            IsGuest = false,
-            IsActive = true
-        };
+            partnerUser = new User
+            {
+                Id = PartnerId,
+                Email = "partner@lootopia.io",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Partner123!"),
+                DisplayName = "Jean-Pierre Boulanger",
+                Role = UserRole.Partner,
+                IsGuest = false,
+                IsActive = true
+            };
+            context.Users.Add(partnerUser);
+            context.Wallets.Add(new Wallet { Id = Guid.NewGuid(), UserId = partnerUser.Id, Balance = 5000 });
 
-        context.Users.AddRange(adminUser, partnerUser, playerUser);
+            var partner = new Partner
+            {
+                Id = Guid.NewGuid(),
+                UserId = partnerUser.Id,
+                BusinessName = "Boulangerie Jean-Pierre",
+                Address = "12 Rue de la Paix, Lyon",
+                TokenBudget = 5000
+            };
+            context.Partners.Add(partner);
+        }
 
-        context.Wallets.AddRange(
-            new Wallet { Id = Guid.NewGuid(), UserId = adminUser.Id, Balance = 999999 },
-            new Wallet { Id = Guid.NewGuid(), UserId = partnerUser.Id, Balance = 5000 },
-            new Wallet { Id = Guid.NewGuid(), UserId = playerUser.Id, Balance = 100 }
-        );
-
-        var partner = new Partner
+        var playerUser = await context.Users.FirstOrDefaultAsync(u => u.Id == PlayerId);
+        if (playerUser == null)
         {
-            Id = Guid.NewGuid(),
-            UserId = partnerUser.Id,
-            BusinessName = "Boulangerie Jean-Pierre",
-            Address = "12 Rue de la Paix, Lyon",
-            TokenBudget = 5000
-        };
-        context.Partners.Add(partner);
+            playerUser = new User
+            {
+                Id = PlayerId,
+                Email = "player@lootopia.io",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Player123!"),
+                DisplayName = "Lucas le Gamer",
+                Role = UserRole.Player,
+                IsGuest = false,
+                IsActive = true
+            };
+            context.Users.Add(playerUser);
+            context.Wallets.Add(new Wallet { Id = Guid.NewGuid(), UserId = playerUser.Id, Balance = 100 });
+        }
 
         await context.SaveChangesAsync();
     }

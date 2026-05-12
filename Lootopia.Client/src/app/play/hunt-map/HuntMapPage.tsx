@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import { useQuery } from "@tanstack/react-query";
 import L from "leaflet";
 import { Star, MapPin, Bug } from "lucide-react";
@@ -44,22 +44,31 @@ function MapCenterController({
   lng: number;
 }) {
   const map = useMap();
-  const hasCentered = useRef(false);
 
   useEffect(() => {
-    if (!hasCentered.current) {
-      map.setView([lat, lng], 15);
-      hasCentered.current = true;
-    }
+    map.setView([lat, lng], map.getZoom(), { animate: true });
   }, [lat, lng, map]);
 
+  return null;
+}
+
+function MapDebugClickHandler({
+  onMapClick,
+}: {
+  onMapClick: (lat: number, lng: number) => void;
+}) {
+  useMapEvents({
+    click(e) {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    },
+  });
   return null;
 }
 
 export function HuntMapPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { position, startTracking, isTracking, debugMode, heading, toggleDebugMode } = useGeolocation();
+  const { position, startTracking, isTracking, debugMode, heading, toggleDebugMode, setDebugPositionAbsolute } = useGeolocation();
 
   useEffect(() => {
     startTracking();
@@ -73,8 +82,12 @@ export function HuntMapPage() {
     [position],
   );
 
+  // Arrondir les coordonnées pour la clé de cache afin d'éviter de re-fetcher à chaque pixel de déplacement
+  const queryLat = position ? Number(position.lat.toFixed(3)) : undefined;
+  const queryLng = position ? Number(position.lng.toFixed(3)) : undefined;
+
   const { data: hunts, isLoading } = useQuery({
-    queryKey: ["hunts", "list", position?.lat, position?.lng],
+    queryKey: ["hunts", "list", queryLat, queryLng],
     queryFn: () =>
       huntsApi.list({
         lat: position?.lat ?? 48.8566,
@@ -82,6 +95,7 @@ export function HuntMapPage() {
         radius: 50,
       }),
     enabled: !!position || !isTracking,
+    placeholderData: (previousData) => previousData,
   });
 
   const handleStartHunt = async (huntId: string) => {
@@ -119,6 +133,9 @@ export function HuntMapPage() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {debugMode && (
+          <MapDebugClickHandler onMapClick={setDebugPositionAbsolute} />
+        )}
         {position && (
           <>
             <MapCenterController lat={position.lat} lng={position.lng} />
@@ -161,22 +178,31 @@ export function HuntMapPage() {
           </Marker>
         ))}
       </MapContainer>
-      <div className="absolute top-4 left-4 right-4 z-[1000] flex justify-between" style={debugMode ? { top: 36 } : undefined}>
+      <div className="absolute top-4 left-4 right-4 z-[1000] flex justify-between items-center gap-2" style={debugMode ? { top: 36 } : undefined}>
         <div className="rounded-lg bg-card/95 backdrop-blur border border-border px-3 py-2 shadow-lg">
           <p className="text-sm font-medium text-foreground">
             {hunts?.length ?? 0} chasse(s) à proximité
           </p>
         </div>
+        <Button
+          variant={debugMode ? "default" : "outline"}
+          size="sm"
+          className={debugMode ? "bg-amber-500 hover:bg-amber-600 text-black font-bold shadow-lg" : "bg-card/95 backdrop-blur shadow-lg"}
+          onClick={toggleDebugMode}
+        >
+          <Bug className="h-4 w-4 mr-1" />
+          {debugMode ? "Débug (Actif)" : "Débug"}
+        </Button>
       </div>
 
       {/* Debug banner */}
       {debugMode && (
-        <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 text-black text-center text-sm font-bold py-1 flex items-center justify-center gap-2">
-          <Bug className="h-4 w-4" />
-          MODE DEBUG — ZQSD / flèches pour se déplacer
+        <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 text-black text-center text-xs sm:text-sm font-bold py-1 px-2 flex items-center justify-center gap-2 shadow-md">
+          <Bug className="h-4 w-4 shrink-0" />
+          <span className="truncate">MODE DEBUG — Cliquez sur la carte ou ZQSD pour déplacer le joueur</span>
           <button
             onClick={toggleDebugMode}
-            className="ml-3 px-2 py-0.5 text-xs bg-black/20 rounded hover:bg-black/30"
+            className="ml-2 px-2 py-0.5 text-xs bg-black/20 rounded hover:bg-black/30 shrink-0"
           >
             Désactiver
           </button>
