@@ -2,6 +2,7 @@ services:
   db:
     image: postgis/postgis:17-3.5
     container_name: lootopia-db
+    restart: always
     environment:
       POSTGRES_USER: lootopia
       POSTGRES_PASSWORD: lootopia_dev_2026
@@ -15,6 +16,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  api:
+    build:
+      context: ./Lootopia.Api
+      dockerfile: Dockerfile
+    container_name: lootopia-api
+    restart: always
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=lootopia;Username=lootopia;Password=lootopia_dev_2026
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   lootopia_pgdata:
