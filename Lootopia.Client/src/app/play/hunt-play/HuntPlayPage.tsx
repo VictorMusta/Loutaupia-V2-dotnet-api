@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MapContainer, TileLayer, Circle, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Circle, useMap, useMapEvents } from "react-leaflet";
 import { MapPin, CheckCircle2, Trophy, Navigation, AlertCircle, Bug } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
@@ -47,13 +47,26 @@ function MapAutoCenter({ lat, lng }: { lat: number; lng: number }) {
   return null;
 }
 
+function MapDebugClickHandler({
+  onMapClick,
+}: {
+  onMapClick: (lat: number, lng: number) => void;
+}) {
+  useMapEvents({
+    click(e) {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+}
+
 
 export function HuntPlayPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { position, startTracking, stopTracking, debugMode, heading, toggleDebugMode } = useGeolocation();
+  const { position, startTracking, stopTracking, debugMode, heading, toggleDebugMode, setDebugPositionAbsolute } = useGeolocation();
 
   const [stepValidated, setStepValidated] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
@@ -188,6 +201,14 @@ export function HuntPlayPage() {
         <span className="text-sm text-muted-foreground shrink-0 ml-2">
           Étape {playerHunt.currentStep} / {playerHunt.steps.length}
         </span>
+        <Button
+          variant={debugMode ? "default" : "ghost"}
+          size="sm"
+          className={debugMode ? "ml-2 bg-amber-500 hover:bg-amber-600 text-black font-bold h-8 px-2.5" : "ml-2 text-muted-foreground hover:text-foreground h-8 px-2.5"}
+          onClick={toggleDebugMode}
+        >
+          <Bug className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Progress bar */}
@@ -222,6 +243,9 @@ export function HuntPlayPage() {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
+            {debugMode && (
+              <MapDebugClickHandler onMapClick={setDebugPositionAbsolute} />
+            )}
             <MapAutoCenter lat={currentStep.latitude} lng={currentStep.longitude} />
             <Circle
               center={[currentStep.latitude, currentStep.longitude]}
@@ -310,12 +334,12 @@ export function HuntPlayPage() {
 
       {/* Debug banner */}
       {debugMode && (
-        <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 text-black text-center text-sm font-bold py-1 flex items-center justify-center gap-2">
-          <Bug className="h-4 w-4" />
-          MODE DEBUG — ZQSD / flèches pour se déplacer
+        <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 text-black text-center text-xs sm:text-sm font-bold py-1 px-2 flex items-center justify-center gap-2 shadow-md">
+          <Bug className="h-4 w-4 shrink-0" />
+          <span className="truncate">MODE DEBUG — Cliquez sur la carte ou ZQSD pour déplacer le joueur</span>
           <button
             onClick={toggleDebugMode}
-            className="ml-3 px-2 py-0.5 text-xs bg-black/20 rounded hover:bg-black/30"
+            className="ml-2 px-2 py-0.5 text-xs bg-black/20 rounded hover:bg-black/30 shrink-0"
           >
             Désactiver
           </button>

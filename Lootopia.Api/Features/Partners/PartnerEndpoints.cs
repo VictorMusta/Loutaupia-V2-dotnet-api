@@ -38,7 +38,7 @@ public static class PartnerEndpoints
         })
         .WithTags("Partners")
         .RequireAuthorization(policy => policy.RequireRole("Partner"))
-        .WithName("GetActivityReport");
+        .WithName("GetPartnerActivityReport");
     }
 
     private static Guid? GetUserId(HttpContext httpContext)
