@@ -8,7 +8,7 @@ public static class ResultExtensions
     public static IResult ToHttpResult(this Result result)
     {
         if (result.IsSuccess)
-            return HttpResults.Ok();
+            return HttpResults.NoContent();
 
         return MapErrorToHttpResult(result.Error);
     }

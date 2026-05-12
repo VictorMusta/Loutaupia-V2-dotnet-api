@@ -16,23 +16,28 @@ public sealed class GetCampaignsHandler(LootopiaDbContext db) : IRequestHandler<
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var campaigns = await query
+        var campaignsData = await query
+            .Include(c => c.Partner)
+            .Include(c => c.Hunt)
             .OrderByDescending(c => c.CreatedAt)
             .Skip((request.Page - 1) * request.Size)
             .Take(request.Size)
+            .ToListAsync(cancellationToken);
+
+        var campaigns = campaignsData
             .Select(c => new CampaignDto(
                 c.Id,
                 c.PartnerId,
+                c.Partner?.BusinessName ?? "Unknown Partner",
                 c.Title,
-                c.HuntId,
+                c.Hunt?.Description ?? "Campagne de récompenses partagées",
                 c.TokenBudget,
-                c.CouponsDistributed,
-                c.MaxCoupons,
+                c.MaxCoupons > 0 ? (c.CouponsDistributed * c.TokenBudget / c.MaxCoupons) : 0,
                 c.Status.ToString(),
                 c.ActivatedAt,
                 c.ExpiresAt,
                 c.CreatedAt))
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         return Result.Success(new GetCampaignsResponse(campaigns, totalCount, request.Page, request.Size));
     }

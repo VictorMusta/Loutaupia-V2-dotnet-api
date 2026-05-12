@@ -27,15 +27,27 @@ public static class CampaignEndpoints
             if (!userId.HasValue)
                 return HttpResults.Unauthorized();
 
-            var partner = await db.Partners.FirstOrDefaultAsync(p => p.UserId == userId.Value);
-            if (partner is null)
-                return HttpResults.Json(new { code = "Partner.NotFound", description = "Partner not found." }, statusCode: 403);
+            Guid partnerId;
+            if (httpContext.User.IsInRole("Admin"))
+            {
+                var camp = await db.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId);
+                if (camp is null)
+                    return HttpResults.NotFound(new { code = "Campaign.NotFound", description = "Campaign not found." });
+                partnerId = camp.PartnerId;
+            }
+            else
+            {
+                var partner = await db.Partners.FirstOrDefaultAsync(p => p.UserId == userId.Value);
+                if (partner is null)
+                    return HttpResults.Json(new { code = "Partner.NotFound", description = "Partner not found." }, statusCode: 403);
+                partnerId = partner.Id;
+            }
 
-            var result = await mediator.Send(new ActivateCampaignCommand(campaignId, partner.Id));
+            var result = await mediator.Send(new ActivateCampaignCommand(campaignId, partnerId));
             return result.ToHttpResult();
         })
         .WithTags("Campaigns")
-        .RequireAuthorization(policy => policy.RequireRole("Partner"))
+        .RequireAuthorization(policy => policy.RequireRole("Partner", "Admin"))
         .WithName("ActivateCampaign");
 
         app.MapPost("/api/campaigns", async (
@@ -69,7 +81,7 @@ public static class CampaignEndpoints
             }
 
             var result = await mediator.Send(new GetCampaignsQuery(AdminView: true, null, page, size));
-            return result.ToHttpResult();
+            return result.IsSuccess ? HttpResults.Ok(result.Value.Campaigns) : result.ToHttpResult();
         })
         .WithTags("Campaigns")
         .RequireAuthorization(policy => policy.RequireRole("Admin"))
@@ -91,7 +103,7 @@ public static class CampaignEndpoints
                 return HttpResults.Json(new { code = "Partner.NotFound", description = "Partner not found." }, statusCode: 403);
 
             var result = await mediator.Send(new GetCampaignsQuery(AdminView: false, partner.Id, page, size));
-            return result.ToHttpResult();
+            return result.IsSuccess ? HttpResults.Ok(result.Value.Campaigns) : result.ToHttpResult();
         })
         .WithTags("Campaigns")
         .RequireAuthorization(policy => policy.RequireRole("Partner"))
