@@ -9,12 +9,12 @@ public record GetCampaignsResponse(
 public record CampaignDto(
     Guid Id,
     Guid PartnerId,
+    string PartnerName,
     string Title,
-    Guid? HuntId,
-    decimal TokenBudget,
-    int CouponsDistributed,
-    int MaxCoupons,
+    string Description,
+    decimal Budget,
+    decimal Spent,
     string Status,
-    DateTime? ActivatedAt,
-    DateTime? ExpiresAt,
+    DateTime? StartDate,
+    DateTime? EndDate,
     DateTime CreatedAt);

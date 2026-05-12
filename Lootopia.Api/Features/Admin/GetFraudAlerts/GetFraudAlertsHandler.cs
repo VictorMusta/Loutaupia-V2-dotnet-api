@@ -11,21 +11,32 @@ public sealed class GetFraudAlertsHandler(LootopiaDbContext db) : IRequestHandle
     {
         var totalCount = await db.FraudAlerts.CountAsync(cancellationToken);
 
-        var alerts = await db.FraudAlerts
+        var alertsData = await db.FraudAlerts
             .OrderByDescending(f => f.CreatedAt)
             .Skip((request.Page - 1) * request.Size)
             .Take(request.Size)
-            .Select(f => new FraudAlertDto(
-                f.Id,
-                f.Type,
-                f.Description,
-                f.RelatedUserId,
-                f.RelatedCampaignId,
-                f.Severity,
-                f.Status.ToString(),
-                f.CreatedAt))
             .ToListAsync(cancellationToken);
 
-        return Result.Success(new GetFraudAlertsResponse(alerts, totalCount, request.Page, request.Size));
+        var userIds = alertsData
+            .Where(a => a.RelatedUserId.HasValue)
+            .Select(a => a.RelatedUserId!.Value)
+            .Distinct()
+            .ToList();
+
+        var userNames = await db.Users
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.DisplayName, cancellationToken);
+
+        var items = alertsData.Select(f => new FraudAlertDto(
+            f.Id,
+            f.RelatedUserId ?? Guid.Empty,
+            f.RelatedUserId.HasValue && userNames.TryGetValue(f.RelatedUserId.Value, out var name) ? name : "Unknown User",
+            f.Type,
+            f.Severity,
+            f.Description,
+            f.Status.ToString(),
+            f.CreatedAt)).ToList();
+
+        return Result.Success(new GetFraudAlertsResponse(items, totalCount, request.Page, request.Size));
     }
 }
