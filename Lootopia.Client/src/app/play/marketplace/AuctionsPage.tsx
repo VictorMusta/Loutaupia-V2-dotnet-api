@@ -100,7 +100,7 @@ export function AuctionsPage() {
   };
 
   return (
-    <div className="h-full flex flex-col gap-4 p-4 bg-slate-950 overflow-y-auto">
+    <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">
       <h1 className="text-xl font-bold text-foreground">Enchères</h1>
 
       {isLoading ? (
@@ -119,7 +119,7 @@ export function AuctionsPage() {
             activeAuctions.map((auction) => (
               <Card
                 key={auction.id}
-                className={`border-border bg-card/80 cursor-pointer transition-all hover:border-primary/50 ${
+                className={`border-border bg-card cursor-pointer transition-all hover:border-primary/50 ${
                   selectedId === auction.id ? "ring-2 ring-primary" : ""
                 }`}
                 onClick={() =>
@@ -148,7 +148,7 @@ export function AuctionsPage() {
       )}
 
       {selectedId && (
-        <Card className="border-primary/30 bg-card/80 mt-4">
+        <Card className="border-primary/30 bg-card mt-4">
           <CardHeader>
             <CardTitle className="text-lg">Détails</CardTitle>
           </CardHeader>

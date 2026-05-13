@@ -105,7 +105,7 @@ export function MarketplacePage() {
   const tradeableItems = inventory?.items?.filter((i) => i.isTradeable) ?? [];
 
   return (
-    <div className="h-full flex flex-col gap-4 p-4 bg-slate-950 overflow-y-auto">
+    <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">
       <h1 className="text-xl font-bold text-foreground">Marché</h1>
 
       <Tabs defaultValue="buy" className="flex-1">
@@ -131,7 +131,7 @@ export function MarketplacePage() {
                 listings?.map((listing) => (
                   <Card
                     key={listing.id}
-                    className="border-border bg-card/80 flex flex-row overflow-hidden"
+                    className="border-border bg-card flex flex-row overflow-hidden"
                   >
                     <div className="w-20 h-20 bg-muted shrink-0 flex items-center justify-center">
                       <Package className="h-10 w-10 text-muted-foreground" />
@@ -183,7 +183,7 @@ export function MarketplacePage() {
         </TabsContent>
 
         <TabsContent value="sell" className="mt-4 space-y-4">
-          <Card className="border-border bg-card/80">
+          <Card className="border-border bg-card">
             <CardContent className="p-4 space-y-4">
               <h3 className="font-semibold text-foreground">
                 Mettre en vente
@@ -241,7 +241,7 @@ export function MarketplacePage() {
                 myListings?.map((listing) => (
                   <Card
                     key={listing.id}
-                    className="border-border bg-card/80 p-4 flex flex-row items-center justify-between"
+                    className="border-border bg-card p-4 flex flex-row items-center justify-between"
                   >
                     <div>
                       <p className="font-medium text-foreground">

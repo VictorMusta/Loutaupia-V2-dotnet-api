@@ -22,10 +22,10 @@ export function ProfilePage() {
   });
 
   return (
-    <div className="h-full flex flex-col gap-6 p-4 bg-slate-950 overflow-y-auto">
+    <div className="h-full flex flex-col gap-6 p-4 overflow-y-auto">
       <h1 className="text-xl font-bold text-foreground">Profil</h1>
 
-      <Card className="border-border bg-card/80">
+      <Card className="border-border bg-card">
         <CardContent className="p-6">
           <div className="flex items-center gap-4">
             <div className="rounded-full bg-primary/20 p-4">
@@ -63,7 +63,7 @@ export function ProfilePage() {
                 key={a.id}
                 className={`border overflow-hidden transition-all ${
                   a.isUnlocked
-                    ? RARITY_COLORS[a.rarity] ?? "bg-card/80 border-border"
+                    ? RARITY_COLORS[a.rarity] ?? "bg-card border-border"
                     : "bg-muted/50 border-border opacity-60"
                 }`}
               >

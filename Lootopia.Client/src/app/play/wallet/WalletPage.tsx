@@ -35,7 +35,7 @@ export function WalletPage() {
     : 0;
 
   return (
-    <div className="h-full flex flex-col gap-6 p-4 bg-slate-950 overflow-y-auto">
+    <div className="h-full flex flex-col gap-6 p-4 overflow-y-auto">
       <h1 className="text-xl font-bold text-foreground">Portefeuille</h1>
 
       {walletLoading ? (
@@ -81,7 +81,7 @@ export function WalletPage() {
                 filteredTransactions.map((tx) => (
                   <Card
                     key={tx.id}
-                    className="border-border bg-card/80 transition-colors hover:bg-card"
+                    className="border-border bg-card transition-colors"
                   >
                     <CardContent className="flex items-center gap-4 py-4">
                       <div

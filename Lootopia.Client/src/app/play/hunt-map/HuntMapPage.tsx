@@ -114,7 +114,7 @@ export function HuntMapPage() {
 
   if (isLoading && !hunts) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-4 p-6 bg-slate-950">
+      <div className="h-full flex flex-col items-center justify-center gap-4 p-6 overflow-y-auto">
         <Skeleton className="h-12 w-48 rounded-lg" />
         <Skeleton className="h-[60vh] w-full rounded-xl" />
       </div>
@@ -122,7 +122,7 @@ export function HuntMapPage() {
   }
 
   return (
-    <div className="relative h-full min-h-[400px] bg-slate-950">
+    <div className="relative h-full min-h-[400px]">
       <MapContainer
         center={center}
         zoom={15}
@@ -179,7 +179,7 @@ export function HuntMapPage() {
         ))}
       </MapContainer>
       <div className="absolute top-4 left-4 right-4 z-[1000] flex justify-between items-center gap-2" style={debugMode ? { top: 36 } : undefined}>
-        <div className="rounded-lg bg-card/95 backdrop-blur border border-border px-3 py-2 shadow-lg">
+        <div className="rounded-lg bg-card border border-border px-3 py-2 shadow-lg">
           <p className="text-sm font-medium text-foreground">
             {hunts?.length ?? 0} chasse(s) à proximité
           </p>
@@ -187,7 +187,7 @@ export function HuntMapPage() {
         <Button
           variant={debugMode ? "default" : "outline"}
           size="sm"
-          className={debugMode ? "bg-amber-500 hover:bg-amber-600 text-black font-bold shadow-lg" : "bg-card/95 backdrop-blur shadow-lg"}
+          className={debugMode ? "bg-amber-500 hover:bg-amber-600 text-black font-bold shadow-lg" : "bg-card shadow-lg"}
           onClick={toggleDebugMode}
         >
           <Bug className="h-4 w-4 mr-1" />

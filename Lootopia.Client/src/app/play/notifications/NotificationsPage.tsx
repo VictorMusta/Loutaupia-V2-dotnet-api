@@ -23,7 +23,7 @@ export function NotificationsPage() {
   const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;
 
   return (
-    <div className="h-full flex flex-col gap-4 p-4 bg-slate-950 overflow-y-auto">
+    <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">Notifications</h1>
         {unreadCount > 0 && (
@@ -51,7 +51,7 @@ export function NotificationsPage() {
               <Card
                 key={notif.id}
                 className={`border-border cursor-pointer transition-all hover:border-primary/30 ${
-                  !notif.isRead ? "bg-primary/5 border-primary/20" : "bg-card/80"
+                  !notif.isRead ? "bg-primary/5 border-primary/20" : "bg-card"
                 }`}
                 onClick={() => {
                   if (!notif.isRead) {

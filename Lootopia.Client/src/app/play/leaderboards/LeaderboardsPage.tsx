@@ -31,7 +31,7 @@ export function LeaderboardsPage() {
   });
 
   return (
-    <div className="h-full flex flex-col gap-4 p-4 bg-slate-950 overflow-y-auto">
+    <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">
       <h1 className="text-xl font-bold text-foreground">Classements</h1>
 
       {myRank && (
@@ -95,7 +95,7 @@ export function LeaderboardsPage() {
                     className={`border-border transition-colors ${
                       entry.userId === user?.id
                         ? "bg-primary/20 border-primary/50 ring-1 ring-primary/30"
-                        : "bg-card/80"
+                        : "bg-card"
                     }`}
                   >
                     <CardContent className="flex items-center gap-4 py-3 px-4">
