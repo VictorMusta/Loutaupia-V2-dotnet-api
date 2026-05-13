@@ -37,6 +37,7 @@ export function MarketplacePage() {
   } | null>(null);
   const [sellItemId, setSellItemId] = useState("");
   const [sellPrice, setSellPrice] = useState("");
+  const [sellStock, setSellStock] = useState("1");
 
   const { data: listings, isLoading: listingsLoading } = useQuery({
     queryKey: ["marketplace", "listings"],
@@ -71,11 +72,12 @@ export function MarketplacePage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: ({ itemId, price }: { itemId: string; price: number }) =>
-      marketplaceApi.create(itemId, price),
+    mutationFn: ({ itemId, price, stock }: { itemId: string; price: number; stock: number }) =>
+      marketplaceApi.create(itemId, price, stock),
     onSuccess: () => {
       setSellItemId("");
       setSellPrice("");
+      setSellStock("1");
       queryClient.invalidateQueries({ queryKey: ["marketplace"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       toast({ title: "Article mis en vente", variant: "success" });
@@ -91,18 +93,20 @@ export function MarketplacePage() {
 
   const handleSell = () => {
     const price = parseFloat(sellPrice);
-    if (!sellItemId || isNaN(price) || price <= 0) {
+    const stock = parseInt(sellStock, 10);
+    if (!sellItemId || isNaN(price) || price <= 0 || isNaN(stock) || stock <= 0) {
       toast({
         title: "Erreur",
-        description: "Sélectionnez un objet et un prix valide.",
+        description: "Sélectionnez un objet, un prix et une quantité valides.",
         variant: "destructive",
       });
       return;
     }
-    createMutation.mutate({ itemId: sellItemId, price });
+    createMutation.mutate({ itemId: sellItemId, price, stock });
   };
 
   const tradeableItems = inventory?.items?.filter((i) => i.isTradeable) ?? [];
+  const selectedItem = tradeableItems.find((i) => i.itemId === sellItemId);
 
   return (
     <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">
@@ -194,7 +198,10 @@ export function MarketplacePage() {
                 </label>
                 <select
                   value={sellItemId}
-                  onChange={(e) => setSellItemId(e.target.value)}
+                  onChange={(e) => {
+                    setSellItemId(e.target.value);
+                    setSellStock("1");
+                  }}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="">Sélectionner...</option>
@@ -215,6 +222,18 @@ export function MarketplacePage() {
                   placeholder="0"
                   value={sellPrice}
                   onChange={(e) => setSellPrice(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground block mb-2">
+                  Quantité {selectedItem ? `(Max: ${selectedItem.quantity})` : ""}
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  max={selectedItem?.quantity ?? 1}
+                  value={sellStock}
+                  onChange={(e) => setSellStock(e.target.value)}
                 />
               </div>
               <Button
