@@ -41,6 +41,9 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBeh
 // --- FluentValidation ---
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 
+// --- Caching ---
+builder.Services.AddMemoryCache();
+
 // --- Services ---
 builder.Services.AddSingleton<IGeoValidator, GeoValidator>();
 builder.Services.AddSingleton<GlobalExceptionHandler>();
@@ -49,6 +52,9 @@ builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IFraudDetector, FraudDetector>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<ICommissionService, CommissionService>();
+builder.Services.AddScoped<IAchievementEngine, AchievementEngine>();
+builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // --- JWT Authentication ---
 var jwtKey = builder.Configuration["Jwt:Key"]!;
@@ -162,6 +168,12 @@ app.MapMarketplaceEndpoints();
 
 // --- Trading Endpoints ---
 app.MapTradingEndpoints();
+
+// --- Achievement Endpoints ---
+app.MapAchievementEndpoints();
+
+// --- Leaderboard Endpoints ---
+app.MapLeaderboardEndpoints();
 
 // --- SPA Fallback Routing ---
 app.MapFallbackToFile("index.html");

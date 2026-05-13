@@ -54,39 +54,64 @@ public class LeaderboardService(LootopiaDbContext db) : ILeaderboardService
                 .ThenBy(a => a.LastCompletedAt)
                 .ToList();
 
-        await db.LeaderboardEntries
-            .Where(e => e.Scope == scope && e.Period == period && e.Metric == metric)
-            .ExecuteDeleteAsync(cancellationToken);
-
-        var entries = new List<LeaderboardEntry>();
-        for (var i = 0; i < ordered.Count; i++)
+        // Use a transaction to prevent race conditions
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        try
         {
-            var a = ordered[i];
-            var score = metric switch
-            {
-                "points" => (decimal)a.Points,
-                "hunts_completed" => a.HuntsCompleted,
-                "time" => (decimal)a.TotalDurationSeconds,
-                _ => (decimal)a.Points
-            };
+            // Check if entries already exist and were recently calculated (within last 30 seconds)
+            var existingEntry = await db.LeaderboardEntries
+                .Where(e => e.Scope == scope && e.Period == period && e.Metric == metric)
+                .OrderByDescending(e => e.CalculatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
 
-            entries.Add(new LeaderboardEntry
+            if (existingEntry != null && (now - existingEntry.CalculatedAt).TotalSeconds < 30)
             {
-                Id = Guid.NewGuid(),
-                PlayerId = a.PlayerId,
-                Scope = scope,
-                Period = period,
-                Metric = metric,
-                Score = score,
-                Rank = i + 1,
-                CalculatedAt = now
-            });
+                // Recent calculation exists, skip to avoid race condition duplicates
+                await transaction.RollbackAsync(cancellationToken);
+                return;
+            }
+
+            await db.LeaderboardEntries
+                .Where(e => e.Scope == scope && e.Period == period && e.Metric == metric)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            var entries = new List<LeaderboardEntry>();
+            for (var i = 0; i < ordered.Count; i++)
+            {
+                var a = ordered[i];
+                var score = metric switch
+                {
+                    "points" => (decimal)a.Points,
+                    "hunts_completed" => a.HuntsCompleted,
+                    "time" => (decimal)a.TotalDurationSeconds,
+                    _ => (decimal)a.Points
+                };
+
+                entries.Add(new LeaderboardEntry
+                {
+                    Id = Guid.NewGuid(),
+                    PlayerId = a.PlayerId,
+                    Scope = scope,
+                    Period = period,
+                    Metric = metric,
+                    Score = score,
+                    Rank = i + 1,
+                    CalculatedAt = now
+                });
+            }
+
+            if (entries.Count > 0)
+            {
+                db.LeaderboardEntries.AddRange(entries);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
         }
-
-        if (entries.Count > 0)
+        catch
         {
-            db.LeaderboardEntries.AddRange(entries);
-            await db.SaveChangesAsync(cancellationToken);
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
         }
     }
 }
