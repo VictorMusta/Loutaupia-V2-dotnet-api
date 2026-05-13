@@ -103,7 +103,7 @@ npm install
 npm run dev
 
 # Open Swagger UI
-# http://localhost:5000/swagger
+# http://localhost:5145/swagger
 ```
 
 ### 📋 Principales Commandes Disponibles
