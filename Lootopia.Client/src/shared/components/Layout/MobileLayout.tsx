@@ -16,7 +16,7 @@ export function MobileLayout() {
 
   return (
     <div className="flex flex-col h-dvh bg-background">
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/80 backdrop-blur-sm">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
         <h1 className="text-lg font-bold text-primary">Lootopia</h1>
         <div className="flex items-center gap-3">
           <NavLink to="/play/wallet" className="flex items-center gap-1 text-sm text-gold">
@@ -37,7 +37,7 @@ export function MobileLayout() {
         <Outlet />
       </main>
 
-      <nav className="flex items-center justify-around border-t border-border bg-card/80 backdrop-blur-sm pb-safe">
+      <nav className="flex items-center justify-around border-t border-border bg-card pb-safe">
         {navItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
