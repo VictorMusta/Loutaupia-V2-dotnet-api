@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Lootopia.Api.Infrastructure.Persistence;
 using Lootopia.Api.Infrastructure.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HttpResults = Microsoft.AspNetCore.Http.Results;
 
@@ -12,55 +13,54 @@ public static class AchievementEndpoints
     {
         var group = app.MapGroup("/api/achievements").WithTags("Achievements");
 
-        group.MapGet("/", GetMyAchievements)
+        group.MapGet("/", async (
+            [FromQuery] string? filter,
+            HttpContext httpContext,
+            [FromServices] LootopiaDbContext db,
+            [FromServices] IAchievementEngine achievementEngine,
+            CancellationToken cancellationToken) =>
+        {
+            var userId = GetUserId(httpContext.User);
+            if (userId is null)
+                return HttpResults.Json(new { Code = "Auth.Unauthorized", Description = "Authentication required." }, statusCode: 401);
+
+            await achievementEngine.EvaluateAsync(userId.Value, cancellationToken);
+
+            var filterMode = string.IsNullOrEmpty(filter) ? "all" : filter.ToLowerInvariant();
+
+            var allAchievements = await db.Achievements.ToListAsync(cancellationToken);
+            var playerAchievementIds = await db.PlayerAchievements
+                .Where(pa => pa.PlayerId == userId.Value)
+                .Select(pa => pa.AchievementId)
+                .ToListAsync(cancellationToken);
+
+            var unlockedLookup = playerAchievementIds.ToHashSet();
+            var unlockDates = await db.PlayerAchievements
+                .Where(pa => pa.PlayerId == userId.Value)
+                .ToDictionaryAsync(pa => pa.AchievementId, pa => pa.UnlockedAt, cancellationToken);
+
+            var items = allAchievements
+                .Where(a => filterMode switch
+                {
+                    "unlocked" => unlockedLookup.Contains(a.Id),
+                    "locked" => !unlockedLookup.Contains(a.Id),
+                    _ => true
+                })
+                .Select(a => new AchievementDto(
+                    a.Id,
+                    a.Name,
+                    a.Description,
+                    a.IconUrl,
+                    a.Rarity,
+                    a.PointsValue,
+                    UnlockedAt: unlockDates.TryGetValue(a.Id, out var u) ? u : null,
+                    IsUnlocked: unlockedLookup.Contains(a.Id)))
+                .ToList();
+
+            return HttpResults.Ok(items);
+        })
             .WithName("GetMyAchievements")
             .RequireAuthorization();
-    }
-
-    private static async Task<IResult> GetMyAchievements(
-        string? filter,
-        HttpContext httpContext,
-        LootopiaDbContext db,
-        IAchievementEngine achievementEngine,
-        CancellationToken cancellationToken)
-    {
-        var userId = GetUserId(httpContext.User);
-        if (userId is null)
-            return HttpResults.Json(new { Code = "Auth.Unauthorized", Description = "Authentication required." }, statusCode: 401);
-
-        await achievementEngine.EvaluateAsync(userId.Value, cancellationToken);
-
-        var filterMode = string.IsNullOrEmpty(filter) ? "all" : filter.ToLowerInvariant();
-
-        var allAchievements = await db.Achievements.ToListAsync(cancellationToken);
-        var playerAchievementIds = await db.PlayerAchievements
-            .Where(pa => pa.PlayerId == userId.Value)
-            .Select(pa => pa.AchievementId)
-            .ToListAsync(cancellationToken);
-
-        var unlockedLookup = playerAchievementIds.ToHashSet();
-        var unlockDates = await db.PlayerAchievements
-            .Where(pa => pa.PlayerId == userId.Value)
-            .ToDictionaryAsync(pa => pa.AchievementId, pa => pa.UnlockedAt, cancellationToken);
-
-        var items = allAchievements
-            .Where(a => filterMode switch
-            {
-                "unlocked" => unlockedLookup.Contains(a.Id),
-                "locked" => !unlockedLookup.Contains(a.Id),
-                _ => true
-            })
-            .Select(a => new AchievementDto(
-                a.Id,
-                a.Name,
-                a.Description,
-                a.IconUrl,
-                a.Rarity,
-                a.PointsValue,
-                UnlockedAt: unlockDates.TryGetValue(a.Id, out var u) ? u : null))
-            .ToList();
-
-        return HttpResults.Ok(new { Items = items });
     }
 
     private static Guid? GetUserId(ClaimsPrincipal user)
@@ -77,4 +77,5 @@ internal sealed record AchievementDto(
     string? IconUrl,
     string Rarity,
     int PointsValue,
-    DateTime? UnlockedAt);
+    DateTime? UnlockedAt,
+    bool IsUnlocked);
