@@ -79,6 +79,8 @@ export const huntsApi = {
     description: string;
     difficulty: number;
     rewardTokens: number;
+    maxWinners: number;
+    rewardItemId?: string | null;
     steps: { clue: string; latitude: number; longitude: number; radiusMeters: number; actionType: string }[];
   }) =>
     apiFetch<{ huntId: string }>("/hunts", {

@@ -13,6 +13,7 @@ public sealed class CreateHuntValidator : AbstractValidator<CreateHuntCommand>
         RuleFor(x => x.Description).MaximumLength(2000);
         RuleFor(x => x.Difficulty).InclusiveBetween(1, 5);
         RuleFor(x => x.RewardTokens).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.MaxWinners).GreaterThan(0);
         RuleFor(x => x.Steps)
             .NotEmpty().WithMessage("At least one step is required.");
         RuleForEach(x => x.Steps).ChildRules(step =>

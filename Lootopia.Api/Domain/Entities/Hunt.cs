@@ -13,6 +13,9 @@ public class Hunt
     public DateTime? EndDate { get; set; }
     public int Difficulty { get; set; } = 1;
     public decimal RewardTokens { get; set; }
+    public int MaxWinners { get; set; } = 5;
+    public Guid? RewardItemId { get; set; }
+    public Item? RewardItem { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<HuntStep> Steps { get; set; } = [];

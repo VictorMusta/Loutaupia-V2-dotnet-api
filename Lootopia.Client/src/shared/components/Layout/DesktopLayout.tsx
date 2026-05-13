@@ -7,6 +7,7 @@ import {
   Megaphone,
   LogOut,
   Bell,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/shared/providers/AuthProvider";
@@ -21,6 +22,7 @@ interface SidebarItem {
 const adminNav: SidebarItem[] = [
   { to: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/admin/hunts", icon: Map, label: "Chasses" },
+  { to: "/admin/items", icon: Package, label: "Objets" },
   { to: "/admin/users", icon: Users, label: "Utilisateurs" },
   { to: "/admin/fraud", icon: ShieldAlert, label: "Fraude" },
   { to: "/admin/campaigns", icon: Megaphone, label: "Campagnes" },
