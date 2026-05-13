@@ -42,7 +42,7 @@ export function DesktopLayout({ variant }: { variant: "admin" | "partner" }) {
     .map((s) => s.charAt(0).toUpperCase() + s.slice(1));
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className={cn("flex h-screen bg-background", variant === "admin" && "theme-admin")}>
       <aside className="w-64 border-r border-border bg-card flex flex-col">
         <div className="p-6">
           <h1 className="text-xl font-bold text-primary">Lootopia</h1>
@@ -86,7 +86,7 @@ export function DesktopLayout({ variant }: { variant: "admin" | "partner" }) {
       </aside>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/50">
+        <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
           <nav className="text-sm text-muted-foreground">
             {breadcrumb.map((part, i) => (
               <span key={i}>
