@@ -1,17 +1,18 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import { useQuery } from "@tanstack/react-query";
 import L from "leaflet";
-import { Star, MapPin, Bug } from "lucide-react";
+import { Star, MapPin, Bug, Clock, Gift, Compass, List, Map as MapIcon, ChevronRight } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { huntsApi } from "@/shared/api/hunts";
 import { useGeolocation } from "@/shared/providers/GeolocationProvider";
 import { useToast } from "@/shared/components/ui/toast";
-import { formatCurrency } from "@/shared/lib/utils";
+import { formatCurrency, cn } from "@/shared/lib/utils";
 import { PlayerSprite } from "@/shared/components/PlayerSprite";
 import { VirtualJoystick } from "@/shared/components/VirtualJoystick";
+import { Badge } from "@/shared/components/ui/badge";
 
 const HUNT_COLORS = ["#6d28d9", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6"];
 
@@ -52,6 +53,16 @@ function MapCenterController({
   return null;
 }
 
+function MapFocusController({ location }: { location: { lat: number; lng: number } | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (location) {
+      map.setView([location.lat, location.lng], 16, { animate: true });
+    }
+  }, [location, map]);
+  return null;
+}
+
 function MapDebugClickHandler({
   onMapClick,
 }: {
@@ -65,10 +76,88 @@ function MapDebugClickHandler({
   return null;
 }
 
+// Composant de miniature graphique animée simulant le tracé du parcours de la chasse
+function MiniRouteMapPreview({ difficulty, seed }: { difficulty: number; seed: string }) {
+  const color = getMarkerColor(difficulty);
+  // Générer des points déterministes basés sur le seed/titre pour simuler un tracé unique
+  const numPts = Math.min(5, difficulty + 2);
+  const hash = seed.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  
+  const pts = useMemo(() => {
+    const list = [];
+    let curX = 15;
+    let curY = 40;
+    list.push([curX, curY]);
+    for (let i = 1; i < numPts; i++) {
+      curX += 20 + ((hash + i * 13) % 15);
+      curY = 20 + ((hash + i * 27) % 30);
+      list.push([curX, curY]);
+    }
+    return list;
+  }, [numPts, hash]);
+
+  const pathD = pts.reduce((acc, pt, i) => acc + `${i === 0 ? 'M' : 'L'} ${pt[0]} ${pt[1]}`, "");
+
+  return (
+    <div className="w-24 h-16 rounded-md bg-secondary/40 border border-border flex items-center justify-center relative overflow-hidden shrink-0">
+      <svg className="w-full h-full absolute inset-0" viewBox="0 0 120 60">
+        {/* Grille pointillée de fond */}
+        <pattern id="dotGrid" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+          <circle cx="2" cy="2" r="0.5" className="fill-muted-foreground/30" />
+        </pattern>
+        <rect width="120" height="60" fill="url(#dotGrid)" />
+
+        {/* Ligne du tracé */}
+        <path
+          d={pathD}
+          fill="none"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="opacity-75 stroke-[2.5]"
+        />
+
+        {/* Trace pointillée animée par-dessus */}
+        <path
+          d={pathD}
+          fill="none"
+          stroke="white"
+          strokeWidth="1.5"
+          strokeDasharray="4 4"
+          className="animate-[dash_8s_linear_infinite] opacity-90"
+        />
+
+        {/* Nœuds waypoints */}
+        {pts.map((pt, index) => (
+          <circle
+            key={index}
+            cx={pt[0]}
+            cy={pt[1]}
+            r={index === pts.length - 1 ? "4" : "2.5"}
+            fill={index === pts.length - 1 ? "#f59e0b" : color}
+            stroke="white"
+            strokeWidth="1"
+            className={index === pts.length - 1 ? "animate-pulse" : ""}
+          />
+        ))}
+      </svg>
+      <span className="absolute bottom-0.5 right-1 text-[8px] font-bold text-muted-foreground/80 bg-background/60 px-1 rounded">
+        {numPts} étapes
+      </span>
+    </div>
+  );
+}
+
 export function HuntMapPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { position, startTracking, isTracking, debugMode, heading, toggleDebugMode, setDebugPositionAbsolute } = useGeolocation();
+
+  // Tab d'affichage réactif pour mobile : "map" ou "list"
+  const [mobileView, setMobileView] = useState<"map" | "list">("map");
+  // Permet de centrer la carte sur une chasse sélectionnée depuis la liste
+  const [focusedLocation, setFocusedLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     startTracking();
@@ -82,7 +171,6 @@ export function HuntMapPage() {
     [position],
   );
 
-  // Arrondir les coordonnées pour la clé de cache afin d'éviter de re-fetcher à chaque pixel de déplacement
   const queryLat = position ? Number(position.lat.toFixed(3)) : undefined;
   const queryLng = position ? Number(position.lng.toFixed(3)) : undefined;
 
@@ -112,6 +200,16 @@ export function HuntMapPage() {
     }
   };
 
+  const focusOnHunt = (lat: number, lng: number) => {
+    setFocusedLocation({ lat, lng });
+    setMobileView("map"); // Bascule immédiatement vers l'onglet carte sur téléphone
+    toast({
+      title: "Carte centrée",
+      description: "La position de la quête a été localisée.",
+      variant: "default",
+    });
+  };
+
   if (isLoading && !hunts) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-4 p-6 overflow-y-auto">
@@ -121,95 +219,248 @@ export function HuntMapPage() {
     );
   }
 
-  return (
-    <div className="relative h-full min-h-[400px]">
-      <MapContainer
-        center={center}
-        zoom={15}
-        className="h-full w-full rounded-none"
-        zoomControl={false}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        {debugMode && (
-          <MapDebugClickHandler onMapClick={setDebugPositionAbsolute} />
-        )}
-        {position && (
-          <>
-            <MapCenterController lat={position.lat} lng={position.lng} />
-            <PlayerSprite lat={position.lat} lng={position.lng} heading={heading} />
-          </>
-        )}
-        {hunts?.map((hunt) => (
-          <Marker
-            key={hunt.id}
-            position={[hunt.latitude, hunt.longitude]}
-            icon={createMarkerIcon(getMarkerColor(hunt.difficulty))}
-          >
-            <Popup>
-              <div className="min-w-[200px] p-2">
-                <h3 className="font-semibold text-foreground mb-1">{hunt.title}</h3>
-                <div className="flex items-center gap-1 mb-2">
-                  {Array.from({ length: hunt.difficulty }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className="h-4 w-4 fill-amber-400 text-amber-400"
-                    />
-                  ))}
-                  <span className="text-xs text-muted-foreground ml-1">
-                    Difficulté
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Récompense: {formatCurrency(hunt.rewardTokens)}
-                </p>
-                <Button
-                  size="sm"
-                  className="w-full bg-primary hover:bg-primary/90"
-                  onClick={() => handleStartHunt(hunt.id)}
-                >
-                  <MapPin className="h-4 w-4 mr-1" />
-                  Démarrer
-                </Button>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
-      <div className="absolute top-4 left-4 right-4 z-[1000] flex justify-between items-center gap-2" style={debugMode ? { top: 36 } : undefined}>
-        <div className="rounded-lg bg-card border border-border px-3 py-2 shadow-lg">
-          <p className="text-sm font-medium text-foreground">
-            {hunts?.length ?? 0} chasse(s) à proximité
-          </p>
-        </div>
-        <Button
-          variant={debugMode ? "default" : "outline"}
-          size="sm"
-          className={debugMode ? "bg-amber-500 hover:bg-amber-600 text-black font-bold shadow-lg" : "bg-card shadow-lg"}
-          onClick={toggleDebugMode}
-        >
-          <Bug className="h-4 w-4 mr-1" />
-          {debugMode ? "Débug (Actif)" : "Débug"}
-        </Button>
+  // Rendu de la liste des chasses partagé entre le volet PC et l'onglet Mobile
+  const renderHuntsList = () => (
+    <div className="p-4 space-y-4">
+      <div className="border-b border-border pb-3">
+        <h2 className="text-lg font-extrabold text-foreground flex items-center gap-2">
+          <Compass className="h-5 w-5 text-primary" />
+          Quêtes Géolocalisées
+        </h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {hunts?.length || 0} aventure(s) détectée(s) dans votre secteur
+        </p>
       </div>
 
-      {/* Debug banner */}
-      {debugMode && (
-        <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 text-black text-center text-xs sm:text-sm font-bold py-1 px-2 flex items-center justify-center gap-2 shadow-md">
-          <Bug className="h-4 w-4 shrink-0" />
-          <span className="truncate">MODE DEBUG — Cliquez sur la carte ou ZQSD pour déplacer le joueur</span>
-          <button
-            onClick={toggleDebugMode}
-            className="ml-2 px-2 py-0.5 text-xs bg-black/20 rounded hover:bg-black/30 shrink-0"
-          >
-            Désactiver
-          </button>
+      {hunts?.length === 0 ? (
+        <div className="p-8 text-center rounded-lg border border-dashed border-border bg-muted/5">
+          <MapPin className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+          <p className="text-xs font-semibold text-foreground">Aucune quête à proximité</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Déplacez-vous pour explorer d'autres zones de la carte.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {hunts?.map((hunt) => {
+            const estimatedDurationMinutes = hunt.difficulty * 6 + 5;
+            const rewardColor = getMarkerColor(hunt.difficulty);
+
+            return (
+              <div
+                key={hunt.id}
+                className="rounded-xl border border-border bg-card hover:border-primary/40 p-3.5 transition-all flex flex-col gap-3 shadow-sm hover:shadow"
+              >
+                {/* En-tête de la carte */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-bold text-foreground truncate">{hunt.title}</h3>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      {Array.from({ length: hunt.difficulty }).map((_, i) => (
+                        <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
+                      ))}
+                      <span className="text-[10px] text-muted-foreground ml-1">
+                        Niveau {hunt.difficulty}
+                      </span>
+                    </div>
+                  </div>
+                  <Badge 
+                    variant="outline" 
+                    className="shrink-0 text-xs font-extrabold px-2 py-0.5 border-primary/30 bg-primary/10 text-primary"
+                  >
+                    {formatCurrency(hunt.rewardTokens)}
+                  </Badge>
+                </div>
+
+                {/* Corps central avec miniature du tracé et indicateurs de temps */}
+                <div className="flex items-center gap-3 bg-background/50 p-2 rounded-lg border border-border/40">
+                  <MiniRouteMapPreview difficulty={hunt.difficulty} seed={hunt.title} />
+
+                  <div className="flex-1 min-w-0 space-y-1.5 justify-center flex flex-col">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Clock className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                      <span className="truncate text-[11px]">
+                        Temps moyen : <strong className="text-foreground">~{estimatedDurationMinutes} min</strong>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Gift className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                      <span className="truncate text-[11px]">
+                        Récompenses assurées
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Boutons d'action pour le joueur */}
+                <div className="flex items-center gap-2 pt-1">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1 text-xs h-8 bg-secondary hover:bg-secondary/80 text-foreground"
+                    onClick={() => focusOnHunt(hunt.latitude, hunt.longitude)}
+                  >
+                    <MapPin className="h-3.5 w-3.5 mr-1 text-primary" />
+                    Localiser
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    className="flex-1 text-xs h-8 bg-primary hover:bg-primary/90 font-bold"
+                    onClick={() => handleStartHunt(hunt.id)}
+                  >
+                    Démarrer
+                    <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
+    </div>
+  );
 
-      <VirtualJoystick />
+  return (
+    <div className="flex flex-col md:flex-row h-full w-full overflow-hidden relative">
+      {/* Sélecteur d'onglet mobile flottant au-dessus */}
+      <div className="md:hidden flex items-center justify-center p-2 bg-card border-b border-border shrink-0 z-10">
+        <div className="inline-flex rounded-lg p-0.5 bg-secondary w-full max-w-xs border border-border">
+          <button
+            onClick={() => setMobileView("map")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold rounded-md transition-all",
+              mobileView === "map" 
+                ? "bg-background text-primary shadow-sm" 
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <MapIcon className="h-3.5 w-3.5" />
+            Carte
+          </button>
+          <button
+            onClick={() => setMobileView("list")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold rounded-md transition-all",
+              mobileView === "list" 
+                ? "bg-background text-primary shadow-sm" 
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <List className="h-3.5 w-3.5" />
+            Liste des quêtes
+          </button>
+        </div>
+      </div>
+
+      {/* Volet Latéral Liste des Chasses (Visible en permanence sur PC, conditionnel sur téléphone) */}
+      <div 
+        className={cn(
+          "w-full md:w-80 lg:w-96 border-r border-border bg-card flex-col overflow-y-auto shrink-0 transition-all",
+          mobileView === "list" ? "flex flex-1 md:flex-initial" : "hidden md:flex"
+        )}
+      >
+        {renderHuntsList()}
+      </div>
+
+      {/* Zone de la Carte Leaflet (Visible en permanence sur PC, conditionnelle sur téléphone) */}
+      <div 
+        className={cn(
+          "flex-1 relative min-h-[300px] flex flex-col transition-all",
+          mobileView === "map" ? "flex" : "hidden md:flex"
+        )}
+      >
+        <MapContainer
+          center={center}
+          zoom={15}
+          className="h-full w-full rounded-none flex-1"
+          zoomControl={false}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {debugMode && (
+            <MapDebugClickHandler onMapClick={setDebugPositionAbsolute} />
+          )}
+          {position && (
+            <>
+              <MapCenterController lat={position.lat} lng={position.lng} />
+              <PlayerSprite lat={position.lat} lng={position.lng} heading={heading} />
+            </>
+          )}
+          <MapFocusController location={focusedLocation} />
+          
+          {hunts?.map((hunt) => (
+            <Marker
+              key={hunt.id}
+              position={[hunt.latitude, hunt.longitude]}
+              icon={createMarkerIcon(getMarkerColor(hunt.difficulty))}
+            >
+              <Popup>
+                <div className="min-w-[200px] p-2">
+                  <h3 className="font-semibold text-foreground mb-1">{hunt.title}</h3>
+                  <div className="flex items-center gap-1 mb-2">
+                    {Array.from({ length: hunt.difficulty }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className="h-4 w-4 fill-amber-400 text-amber-400"
+                      />
+                    ))}
+                    <span className="text-xs text-muted-foreground ml-1">
+                      Difficulté
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Récompense: {formatCurrency(hunt.rewardTokens)}
+                  </p>
+                  <Button
+                    size="sm"
+                    className="w-full bg-primary hover:bg-primary/90 font-bold"
+                    onClick={() => handleStartHunt(hunt.id)}
+                  >
+                    <MapPin className="h-4 w-4 mr-1" />
+                    Démarrer
+                  </Button>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+        </MapContainer>
+
+        {/* Bouton de debug flottant */}
+        <div className="absolute top-4 left-4 right-4 z-[1000] flex justify-between items-center gap-2" style={debugMode ? { top: 36 } : undefined}>
+          <div className="rounded-lg bg-card border border-border px-3 py-2 shadow-lg">
+            <p className="text-sm font-medium text-foreground">
+              {hunts?.length ?? 0} chasse(s) à proximité
+            </p>
+          </div>
+          <Button
+            variant={debugMode ? "default" : "outline"}
+            size="sm"
+            className={debugMode ? "bg-amber-500 hover:bg-amber-600 text-black font-bold shadow-lg" : "bg-card shadow-lg"}
+            onClick={toggleDebugMode}
+          >
+            <Bug className="h-4 w-4 mr-1" />
+            {debugMode ? "Débug (Actif)" : "Débug"}
+          </Button>
+        </div>
+
+        {/* Bannière de débuggage */}
+        {debugMode && (
+          <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 text-black text-center text-xs sm:text-sm font-bold py-1 px-2 flex items-center justify-center gap-2 shadow-md">
+            <Bug className="h-4 w-4 shrink-0" />
+            <span className="truncate">MODE DEBUG — Cliquez sur la carte ou ZQSD pour déplacer le joueur</span>
+            <button
+              onClick={toggleDebugMode}
+              className="ml-2 px-2 py-0.5 text-xs bg-black/20 rounded hover:bg-black/30 shrink-0"
+            >
+              Désactiver
+            </button>
+          </div>
+        )}
+
+        <VirtualJoystick />
+      </div>
     </div>
   );
 }

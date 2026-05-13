@@ -12,6 +12,12 @@ export interface Campaign {
   startDate: string;
   endDate: string;
   createdAt: string;
+  startedCount?: number;
+  completedCount?: number;
+  couponsDistributed?: number;
+  maxCoupons?: number;
+  averageCompletionMinutes?: number;
+  dailyTracking?: { date: string; explorations: number }[];
 }
 
 export const campaignsApi = {
