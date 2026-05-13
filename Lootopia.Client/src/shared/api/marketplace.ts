@@ -39,10 +39,10 @@ export const marketplaceApi = {
       body: JSON.stringify({ quantity: 1 }),
     }),
 
-  create: (itemId: string, price: number) =>
+  create: (itemId: string, price: number, stock: number) =>
     apiFetch<Listing>("/marketplace/listings", {
       method: "POST",
-      body: JSON.stringify({ itemId, price }),
+      body: JSON.stringify({ itemId, price, stock }),
     }),
 
   cancel: (listingId: string) =>
