@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Lootopia.Api.Features.Hunts.ActivateHunt;
+using Lootopia.Api.Features.Hunts.ArchiveHunt;
 using Lootopia.Api.Features.Hunts.CreateHunt;
 using Lootopia.Api.Features.Hunts.GetHunt;
 using Lootopia.Api.Features.Hunts.GetMyHunts;
@@ -53,6 +54,10 @@ public static class HuntEndpoints
 
         group.MapPost("/{huntId:guid}/activate", ActivateHunt)
             .WithName("ActivateHunt")
+            .RequireAuthorization("Admin");
+
+        group.MapPost("/{huntId:guid}/archive", ArchiveHunt)
+            .WithName("ArchiveHunt")
             .RequireAuthorization("Admin");
     }
 
@@ -145,6 +150,8 @@ public static class HuntEndpoints
             body.Description,
             body.Difficulty,
             body.RewardTokens,
+            body.MaxWinners,
+            body.RewardItemId,
             steps), cancellationToken);
 
         return result.IsSuccess
@@ -169,6 +176,15 @@ public static class HuntEndpoints
         return result.ToHttpResult();
     }
 
+    private static async Task<IResult> ArchiveHunt(
+        Guid huntId,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new ArchiveHuntCommand(huntId), cancellationToken);
+        return result.ToHttpResult();
+    }
+
     private static Guid? GetUserId(ClaimsPrincipal user)
     {
         var sub = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
@@ -183,6 +199,8 @@ internal sealed record CreateHuntRequest(
     string Description,
     int Difficulty,
     decimal RewardTokens,
+    int MaxWinners,
+    Guid? RewardItemId,
     CreateHuntStepRequest[] Steps);
 
 internal sealed record CreateHuntStepRequest(

@@ -23,6 +23,7 @@ import { AdminHuntsPage } from "@/app/admin/hunts/AdminHuntsPage";
 import { AdminUsersPage } from "@/app/admin/users/AdminUsersPage";
 import { AdminFraudPage } from "@/app/admin/fraud/AdminFraudPage";
 import { AdminCampaignsPage } from "@/app/admin/campaigns/AdminCampaignsPage";
+import { AdminItemsPage } from "@/app/admin/items/AdminItemsPage";
 import { PartnerDashboardPage } from "@/app/partner/dashboard/PartnerDashboardPage";
 import { PartnerCampaignsPage } from "@/app/partner/campaigns/PartnerCampaignsPage";
 
@@ -84,6 +85,7 @@ export default function App() {
                   <Route path="users" element={<AdminUsersPage />} />
                   <Route path="fraud" element={<AdminFraudPage />} />
                   <Route path="campaigns" element={<AdminCampaignsPage />} />
+                  <Route path="items" element={<AdminItemsPage />} />
                 </Route>
 
                 {/* Partner desktop routes */}
