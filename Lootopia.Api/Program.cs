@@ -7,6 +7,7 @@ using Lootopia.Api.Features.Auctions;
 using Lootopia.Api.Features.Campaigns;
 using Lootopia.Api.Features.Commissions;
 using Lootopia.Api.Features.Inventory;
+using Lootopia.Api.Features.Items;
 using Lootopia.Api.Features.Partners;
 using Lootopia.Api.Features.Hunts;
 using Lootopia.Api.Features.Leaderboards;
@@ -141,6 +142,9 @@ app.MapHuntEndpoints();
 
 // --- Inventory Endpoints ---
 app.MapInventoryEndpoints();
+
+// --- Items Endpoints ---
+app.MapItemsEndpoints();
 
 // --- Campaign Endpoints ---
 app.MapCampaignEndpoints();

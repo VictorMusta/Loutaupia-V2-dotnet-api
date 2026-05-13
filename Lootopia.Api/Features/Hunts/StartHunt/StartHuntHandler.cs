@@ -31,7 +31,13 @@ public sealed class StartHuntHandler(LootopiaDbContext db) : IRequestHandler<Sta
                 cancellationToken);
 
         if (inProgressHunt is not null)
-            return Result.Failure<StartHuntResponse>(Error.Conflict);
+        {
+            var curStep = hunt.Steps.FirstOrDefault(s => s.StepOrder == inProgressHunt.CurrentStepOrder);
+            return Result.Success(new StartHuntResponse(
+                curStep?.Clue ?? string.Empty,
+                inProgressHunt.CurrentStepOrder,
+                hunt.Steps.Count));
+        }
 
         var firstStep = hunt.Steps.FirstOrDefault(s => s.StepOrder == 1);
         if (firstStep is null)

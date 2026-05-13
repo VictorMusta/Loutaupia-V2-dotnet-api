@@ -10,6 +10,8 @@ public record CreateHuntCommand(
     string Description,
     int Difficulty,
     decimal RewardTokens,
+    int MaxWinners,
+    Guid? RewardItemId,
     IReadOnlyList<CreateHuntStepDto> Steps) : IRequest<Result<CreateHuntResponse>>;
 
 public record CreateHuntStepDto(

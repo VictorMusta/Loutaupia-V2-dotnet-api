@@ -22,7 +22,9 @@ public sealed class CreateHuntHandler(LootopiaDbContext db) : IRequestHandler<Cr
             Status = HuntStatus.Draft,
             CreatedBy = request.CreatedBy,
             Difficulty = request.Difficulty,
-            RewardTokens = request.RewardTokens
+            RewardTokens = request.RewardTokens,
+            MaxWinners = request.MaxWinners,
+            RewardItemId = request.RewardItemId
         };
         db.Hunts.Add(hunt);
 

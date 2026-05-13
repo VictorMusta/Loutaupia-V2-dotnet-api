@@ -80,16 +80,61 @@ public sealed class ValidateStepHandler(
             playerHunt.CompletedAt = DateTime.UtcNow;
             message = "Félicitations, vous avez terminé la chasse aux trésors !";
 
-            // Créditer la récompense si configurée
+            // Créditer la récompense si configurée et dans la limite des quotas
             if (playerHunt.Hunt.RewardTokens > 0)
             {
-                reward = playerHunt.Hunt.RewardTokens;
-                var creditResult = await walletService.CreditAsync(
-                    request.PlayerId,
-                    playerHunt.Hunt.RewardTokens,
-                    $"Récompense de chasse aux trésors : {playerHunt.Hunt.Title}",
-                    $"hunt-reward-{playerHunt.Id}",
+                var hasPlayerAlreadyCompleted = await db.PlayerHunts.AnyAsync(
+                    ph => ph.HuntId == playerHunt.HuntId && ph.PlayerId == request.PlayerId && ph.Status == PlayerHuntStatus.Completed && ph.Id != playerHunt.Id,
                     cancellationToken);
+
+                var totalWinnersCount = await db.PlayerHunts
+                    .Where(ph => ph.HuntId == playerHunt.HuntId && ph.Status == PlayerHuntStatus.Completed && ph.Id != playerHunt.Id)
+                    .Select(ph => ph.PlayerId)
+                    .Distinct()
+                    .CountAsync(cancellationToken);
+
+                var maxWinnersCap = playerHunt.Hunt.MaxWinners;
+
+                if (hasPlayerAlreadyCompleted)
+                {
+                    message = "Félicitations pour cette complétion pour le fun ! (Récompense déjà obtenue lors de votre premier passage)";
+                }
+                else if (totalWinnersCount >= maxWinnersCap)
+                {
+                    message = "Félicitations, vous avez terminé la chasse ! (Le quota maximum de joueurs récompensés a été atteint, mais gloire à vous !)";
+                }
+                else
+                {
+                    reward = playerHunt.Hunt.RewardTokens;
+                    await walletService.CreditAsync(
+                        request.PlayerId,
+                        playerHunt.Hunt.RewardTokens,
+                        $"Récompense de chasse aux trésors : {playerHunt.Hunt.Title}",
+                        $"hunt-reward-{playerHunt.Id}",
+                        cancellationToken);
+
+                    if (playerHunt.Hunt.RewardItemId.HasValue)
+                    {
+                        var inv = await db.PlayerInventories.FirstOrDefaultAsync(
+                            pi => pi.PlayerId == request.PlayerId && pi.ItemId == playerHunt.Hunt.RewardItemId.Value,
+                            cancellationToken);
+
+                        if (inv is not null)
+                        {
+                            inv.Quantity += 1;
+                        }
+                        else
+                        {
+                            db.PlayerInventories.Add(new PlayerInventory
+                            {
+                                PlayerId = request.PlayerId,
+                                ItemId = playerHunt.Hunt.RewardItemId.Value,
+                                Quantity = 1
+                            });
+                        }
+                        message += " Vous avez également reçu un objet exclusif !";
+                    }
+                }
             }
         }
         else

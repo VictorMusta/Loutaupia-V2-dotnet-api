@@ -3,6 +3,7 @@ import { useState, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import type { LatLngLiteral } from "leaflet";
 import { huntsApi } from "@/shared/api/hunts";
+import { itemsApi } from "@/shared/api/items";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import {
@@ -161,9 +162,16 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
   const [description, setDescription] = useState("");
   const [difficulty, setDifficulty] = useState(1);
   const [reward, setReward] = useState(100);
+  const [maxWinners, setMaxWinners] = useState(5);
+  const [rewardItemId, setRewardItemId] = useState<string | null>(null);
   const [steps, setSteps] = useState<HuntStepForm[]>([]);
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
   const center: LatLngLiteral = { lat: 48.8566, lng: 2.3522 };
+
+  const { data: items = [] } = useQuery({
+    queryKey: ["items"],
+    queryFn: itemsApi.list,
+  });
 
   const createMutation = useMutation({
     mutationFn: (data: Parameters<typeof huntsApi.create>[0]) => huntsApi.create(data),
@@ -183,6 +191,8 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
     setDescription("");
     setDifficulty(1);
     setReward(100);
+    setMaxWinners(5);
+    setRewardItemId(null);
     setSteps([]);
     setEditingStepIndex(null);
   }, []);
@@ -258,6 +268,8 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
       description: description.trim(),
       difficulty,
       rewardTokens: reward,
+      maxWinners,
+      rewardItemId,
       steps: steps.map((s) => ({
         clue: s.clue.trim(),
         latitude: s.latitude,
@@ -305,9 +317,9 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
                 className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="mb-1 block text-sm font-medium text-foreground">Difficulty (1-5)</label>
+                <label className="mb-1 block text-xs font-medium text-foreground truncate">Difficulty (1-5)</label>
                 <Input
                   type="number"
                   min={1}
@@ -318,7 +330,7 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-foreground">Reward (LTK)</label>
+                <label className="mb-1 block text-xs font-medium text-foreground truncate">Reward (LTK)</label>
                 <Input
                   type="number"
                   min={0}
@@ -327,6 +339,32 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
                   className="bg-background"
                 />
               </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-foreground truncate">Max Winners</label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={maxWinners}
+                  onChange={(e) => setMaxWinners(Number(e.target.value) || 1)}
+                  className="bg-background"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-foreground">Bonus Item Reward (Optional)</label>
+              <select
+                value={rewardItemId || ""}
+                onChange={(e) => setRewardItemId(e.target.value || null)}
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">-- No item reward --</option>
+                {items.map((it) => (
+                  <option key={it.id} value={it.id}>
+                    {it.name} ({it.rarity} {it.type})
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
