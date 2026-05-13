@@ -152,6 +152,7 @@ public static class HuntEndpoints
             body.RewardTokens,
             body.MaxWinners,
             body.RewardItemId,
+            body.PartnerId,
             steps), cancellationToken);
 
         return result.IsSuccess
@@ -201,6 +202,7 @@ internal sealed record CreateHuntRequest(
     decimal RewardTokens,
     int MaxWinners,
     Guid? RewardItemId,
+    Guid? PartnerId,
     CreateHuntStepRequest[] Steps);
 
 internal sealed record CreateHuntStepRequest(

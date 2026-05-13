@@ -49,32 +49,49 @@ export function AdminItemsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {items.map((item) => (
-            <Card key={item.id} className="border-2 border-border bg-card shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-foreground text-base truncate pr-2">{item.name}</h3>
-                  <Badge
-                    variant="outline"
-                    className={`text-xs font-bold uppercase tracking-wider ${
-                      item.rarity === "Legendary"
-                        ? "bg-amber-100 text-amber-800 border-amber-300"
-                        : item.rarity === "Epic"
-                        ? "bg-purple-100 text-purple-800 border-purple-300"
-                        : item.rarity === "Rare"
-                        ? "bg-blue-100 text-blue-800 border-blue-300"
-                        : "bg-gray-100 text-gray-800 border-gray-300"
-                    }`}
-                  >
-                    {item.rarity}
-                  </Badge>
+            <Card key={item.id} className="border-2 border-border bg-card shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col group">
+              <div className="relative h-40 w-full bg-muted/40 border-b border-border overflow-hidden flex items-center justify-center">
+                {item.imageUrl ? (
+                  <img 
+                    src={item.imageUrl} 
+                    alt={item.name} 
+                    className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <Package className="h-12 w-12 text-muted-foreground/30 stroke-[1.5]" />
+                )}
+                <span className="absolute bottom-2 left-2 font-semibold uppercase px-2 py-0.5 bg-background/90 backdrop-blur-sm rounded border border-border text-[10px] text-foreground shadow-sm">
+                  {item.type}
+                </span>
+              </div>
+
+              <CardContent className="p-4 flex-1 flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start mb-1.5 gap-2">
+                    <h3 className="font-bold text-foreground text-base truncate flex-1">{item.name}</h3>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                        item.rarity === "Legendary"
+                          ? "bg-amber-100 text-amber-800 border-amber-300"
+                          : item.rarity === "Epic"
+                          ? "bg-purple-100 text-purple-800 border-purple-300"
+                          : item.rarity === "Rare"
+                          ? "bg-blue-100 text-blue-800 border-blue-300"
+                          : "bg-gray-100 text-gray-800 border-gray-300"
+                      }`}
+                    >
+                      {item.rarity}
+                    </Badge>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground line-clamp-2 mb-4 h-8">{item.description}</p>
                 </div>
 
-                <p className="text-xs text-muted-foreground line-clamp-2 mb-4 h-8">{item.description}</p>
-
                 <div className="flex items-center justify-between pt-2 border-t border-border/50 text-[10px] text-muted-foreground">
-                  <span className="font-semibold uppercase px-1.5 py-0.5 bg-background rounded border border-border">
-                    {item.type}
-                  </span>
                   <span>{item.isTradeable ? "🔄 Tradeable" : "🔒 Account Bound"}</span>
                 </div>
               </CardContent>
