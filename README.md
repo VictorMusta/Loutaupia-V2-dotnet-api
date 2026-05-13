@@ -38,13 +38,41 @@ Lootopia.Api/
 
 ## Quick Start
 
+### Using Docker (Recommended)
+Run the complete application stack with one command:
+
 ```bash
-# Start PostgreSQL + PostGIS
-docker compose up -d
+# Start all services (Database + API + Frontend)
+docker-compose up -d --build
+
+# Access the application:
+# Frontend: http://localhost:3000
+# API: http://localhost:8080
+# API Health: http://localhost:8080/health
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+```
+
+See [DOCKER.md](DOCKER.md) for detailed Docker documentation.
+
+### Manual Setup
+
+```bash
+# Start PostgreSQL + PostGIS only
+docker compose up db -d
 
 # Run the API
 cd Lootopia.Api
 dotnet run
+
+# Run the Frontend (in another terminal)
+cd Lootopia.Client
+npm install
+npm run dev
 
 # Open Swagger UI
 # http://localhost:5000/swagger
