@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Circle, useMap, P
 import L, { type LatLngLiteral } from "leaflet";
 import { huntsApi } from "@/shared/api/hunts";
 import { itemsApi } from "@/shared/api/items";
+import { partnersApi } from "@/shared/api/partners";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import {
@@ -20,7 +21,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Badge } from "@/shared/components/ui/badge";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useToast } from "@/shared/components/ui/toast";
-import { Plus, MapPin, Play, ChevronDown, ChevronUp, Trash2, Check, Maximize2, GripVertical } from "lucide-react";
+import { Plus, MapPin, Play, ChevronDown, ChevronUp, Trash2, Check, Maximize2, GripVertical, Archive } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 
 interface HuntStepForm {
@@ -62,6 +63,17 @@ export function AdminHuntsPage() {
     },
     onError: (err: Error) => {
       toast({ title: "Failed to activate", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: (id: string) => huntsApi.archive(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-hunts"] });
+      toast({ title: "Hunt archived", variant: "success" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to archive", description: err.message, variant: "destructive" });
     },
   });
 
@@ -129,15 +141,30 @@ export function AdminHuntsPage() {
                           {hunt.status}
                         </Badge>
                       </td>
-                      <td className="py-3">
+                      <td className="py-3 flex items-center gap-2">
                         {hunt.status.toLowerCase() === "draft" && (
                           <Button
                             size="sm"
                             onClick={() => activateMutation.mutate(hunt.id)}
-                            disabled={activateMutation.isPending}
+                            disabled={activateMutation.isPending || archiveMutation.isPending}
                           >
                             <Play className="h-4 w-4 mr-1" />
                             Activate
+                          </Button>
+                        )}
+                        {hunt.status.toLowerCase() !== "archived" && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              if (confirm("Voulez-vous vraiment archiver cette chasse ?")) {
+                                archiveMutation.mutate(hunt.id);
+                              }
+                            }}
+                            disabled={archiveMutation.isPending}
+                            title="Archiver la chasse"
+                          >
+                            <Archive className="h-4 w-4" />
                           </Button>
                         )}
                       </td>
@@ -211,6 +238,7 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
   const [reward, setReward] = useState(100);
   const [maxWinners, setMaxWinners] = useState(5);
   const [rewardItemId, setRewardItemId] = useState<string | null>(null);
+  const [partnerId, setPartnerId] = useState<string | null>(null);
   const [steps, setSteps] = useState<HuntStepForm[]>([]);
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
   const [isMapExpanded, setIsMapExpanded] = useState(false);
@@ -220,6 +248,11 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
   const { data: items = [] } = useQuery({
     queryKey: ["items"],
     queryFn: itemsApi.list,
+  });
+
+  const { data: partners = [] } = useQuery({
+    queryKey: ["admin-partners"],
+    queryFn: partnersApi.listAdmin,
   });
 
   const createMutation = useMutation({
@@ -242,6 +275,7 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
     setReward(100);
     setMaxWinners(5);
     setRewardItemId(null);
+    setPartnerId(null);
     setSteps([]);
     setEditingStepIndex(null);
   }, []);
@@ -319,6 +353,7 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
       rewardTokens: reward,
       maxWinners,
       rewardItemId,
+      partnerId,
       steps: steps.map((s) => ({
         clue: s.clue.trim(),
         latitude: s.latitude,
@@ -418,6 +453,22 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
                 {items.map((it) => (
                   <option key={it.id} value={it.id}>
                     {it.name} ({it.rarity} {it.type})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-foreground">Associer un Partenaire Sponsor (Optionnel)</label>
+              <select
+                value={partnerId || ""}
+                onChange={(e) => setPartnerId(e.target.value || null)}
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">-- Aucun partenaire associé --</option>
+                {partners.map((pt) => (
+                  <option key={pt.id} value={pt.id}>
+                    {pt.businessName} ({pt.displayName})
                   </option>
                 ))}
               </select>

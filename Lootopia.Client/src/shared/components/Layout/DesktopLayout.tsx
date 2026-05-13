@@ -8,6 +8,7 @@ import {
   LogOut,
   Bell,
   Package,
+  Briefcase,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/shared/providers/AuthProvider";
@@ -23,6 +24,7 @@ const adminNav: SidebarItem[] = [
   { to: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/admin/hunts", icon: Map, label: "Chasses" },
   { to: "/admin/items", icon: Package, label: "Objets" },
+  { to: "/admin/partners", icon: Briefcase, label: "Partenaires" },
   { to: "/admin/users", icon: Users, label: "Utilisateurs" },
   { to: "/admin/fraud", icon: ShieldAlert, label: "Fraude" },
   { to: "/admin/campaigns", icon: Megaphone, label: "Campagnes" },

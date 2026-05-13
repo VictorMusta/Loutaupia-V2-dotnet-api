@@ -81,6 +81,7 @@ export const huntsApi = {
     rewardTokens: number;
     maxWinners: number;
     rewardItemId?: string | null;
+    partnerId?: string | null;
     steps: { clue: string; latitude: number; longitude: number; radiusMeters: number; actionType: string }[];
   }) =>
     apiFetch<{ huntId: string }>("/hunts", {
@@ -90,6 +91,9 @@ export const huntsApi = {
 
   activate: (id: string) =>
     apiFetch<void>(`/hunts/${id}/activate`, { method: "POST" }),
+
+  archive: (id: string) =>
+    apiFetch<void>(`/hunts/${id}/archive`, { method: "POST" }),
 
   start: (huntId: string) =>
     apiFetch<PlayerHunt>(`/hunts/${huntId}/start`, { method: "POST" }),

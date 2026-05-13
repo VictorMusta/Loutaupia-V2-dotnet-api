@@ -46,6 +46,26 @@ public sealed class CreateHuntHandler(LootopiaDbContext db) : IRequestHandler<Cr
             stepOrder++;
         }
 
+        if (request.PartnerId.HasValue)
+        {
+            var partnerEntity = await db.Partners.FindAsync([request.PartnerId.Value], cancellationToken);
+            if (partnerEntity != null)
+            {
+                var campaign = new Campaign
+                {
+                    Id = Guid.NewGuid(),
+                    PartnerId = partnerEntity.Id,
+                    Title = $"Chasse sponsorisée : {request.Title}",
+                    HuntId = huntId,
+                    TokenBudget = request.RewardTokens * request.MaxWinners,
+                    Status = CampaignStatus.Active,
+                    ActivatedAt = DateTime.UtcNow,
+                    ExpiresAt = DateTime.UtcNow.AddDays(60)
+                };
+                db.Campaigns.Add(campaign);
+            }
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
         return Result.Success(new CreateHuntResponse(huntId));

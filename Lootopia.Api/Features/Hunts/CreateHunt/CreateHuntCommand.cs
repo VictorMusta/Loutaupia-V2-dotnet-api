@@ -12,6 +12,7 @@ public record CreateHuntCommand(
     decimal RewardTokens,
     int MaxWinners,
     Guid? RewardItemId,
+    Guid? PartnerId,
     IReadOnlyList<CreateHuntStepDto> Steps) : IRequest<Result<CreateHuntResponse>>;
 
 public record CreateHuntStepDto(
