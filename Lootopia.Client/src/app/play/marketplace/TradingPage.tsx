@@ -102,7 +102,7 @@ export function TradingPage() {
   };
 
   return (
-    <div className="h-full flex flex-col gap-4 p-4 bg-slate-950 overflow-y-auto">
+    <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">Échanges</h1>
         <Button
@@ -116,7 +116,7 @@ export function TradingPage() {
       </div>
 
       {showCreateForm && (
-        <Card className="border-border bg-card/80">
+        <Card className="border-border bg-card">
           <CardContent className="p-4 space-y-4">
             <div>
               <label className="text-sm text-muted-foreground block mb-2">
@@ -187,7 +187,7 @@ export function TradingPage() {
               received.map((offer) => (
                 <Card
                   key={offer.id}
-                  className="border-border bg-card/80 mb-3"
+                  className="border-border bg-card mb-3"
                 >
                   <CardContent className="p-4">
                     <p className="text-sm text-muted-foreground">
@@ -243,7 +243,7 @@ export function TradingPage() {
               sent.map((offer) => (
                 <Card
                   key={offer.id}
-                  className="border-border bg-card/80 mb-3"
+                  className="border-border bg-card mb-3"
                 >
                   <CardContent className="p-4">
                     <p className="text-sm text-muted-foreground">

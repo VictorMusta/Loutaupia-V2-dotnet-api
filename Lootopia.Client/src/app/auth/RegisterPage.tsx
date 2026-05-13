@@ -63,14 +63,14 @@ export function RegisterPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="text-center">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-500 via-purple-600 to-violet-700 bg-clip-text text-transparent tracking-tight">
@@ -81,7 +81,7 @@ export function RegisterPage() {
           </p>
         </div>
 
-        <Card className="border-border bg-card/80 backdrop-blur-sm shadow-xl transition-all duration-300 hover:shadow-purple-500/10">
+        <Card className="border-border bg-card shadow-xl transition-all duration-300">
           <CardHeader className="space-y-1">
             <CardTitle className="text-xl">Créer un compte</CardTitle>
             <CardDescription>Inscrivez-vous pour sauvegarder vos progrès</CardDescription>

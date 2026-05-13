@@ -135,7 +135,7 @@ export function HuntPlayPage() {
 
   if (isLoading && !playerHunt) {
     return (
-      <div className="h-full flex flex-col gap-4 p-4 bg-slate-950">
+      <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">
         <Skeleton className="h-12 w-full rounded-lg" />
         <Skeleton className="h-48 w-full rounded-xl" />
         <Skeleton className="h-24 w-full rounded-lg" />
@@ -145,7 +145,7 @@ export function HuntPlayPage() {
 
   if (!playerHunt) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-4 p-6 bg-slate-950">
+      <div className="h-full flex flex-col items-center justify-center gap-4 p-6 overflow-y-auto">
         <AlertCircle className="h-12 w-12 text-muted-foreground" />
         <p className="text-muted-foreground text-center">
           Chasse introuvable. Elle n'a peut-être pas encore démarré.
@@ -159,7 +159,7 @@ export function HuntPlayPage() {
 
   if (showCompletion || isCompleted) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-6 p-6 bg-slate-950 relative overflow-hidden">
+      <div className="h-full flex flex-col items-center justify-center gap-6 p-6 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           {[...Array(30)].map((_, i) => (
             <div
@@ -192,9 +192,9 @@ export function HuntPlayPage() {
     : [48.8566, 2.3522] as [number, number];
 
   return (
-    <div className="h-full flex flex-col md:flex-row bg-slate-950 pb-safe relative overflow-hidden">
+    <div className="h-full flex flex-col md:flex-row pb-safe relative overflow-hidden">
       {/* Sidebar/Panel containing clues and actions */}
-      <div className="w-full md:w-[400px] shrink-0 flex flex-col bg-card/95 md:bg-card/90 backdrop-blur border-t md:border-t-0 md:border-r border-border z-20 shadow-2xl order-2 md:order-1 overflow-y-auto max-h-[55vh] md:max-h-full">
+      <div className="w-full md:w-[400px] shrink-0 flex flex-col bg-card border-t md:border-t-0 md:border-r border-border z-20 shadow-2xl order-2 md:order-1 overflow-y-auto max-h-[55vh] md:max-h-full">
         {/* Header */}
         <div className="flex items-center justify-between p-4 pb-2">
           <h1 className="text-base sm:text-lg font-semibold text-foreground truncate">
@@ -236,7 +236,7 @@ export function HuntPlayPage() {
         {/* Distance indicator */}
         {currentStep && (
           <div className="px-4 mt-1 shrink-0">
-            <Card className="border-border bg-card/60 shadow-sm">
+            <Card className="border-border bg-card shadow-sm">
               <CardContent className="py-2.5 px-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Navigation className="h-4 w-4 text-primary" />
@@ -256,7 +256,7 @@ export function HuntPlayPage() {
 
         {/* Clue */}
         <div className="flex-1 px-4 mt-3 min-h-[120px]">
-          <Card className="border-border bg-card/60 h-full flex flex-col shadow-inner">
+          <Card className="border-border bg-card h-full flex flex-col shadow-inner">
             <CardContent className="p-3.5 flex-1 flex flex-col gap-2">
               <div className="flex items-center gap-2 border-b border-border/50 pb-2">
                 <MapPin className="h-4 w-4 text-primary shrink-0" />
@@ -274,7 +274,7 @@ export function HuntPlayPage() {
         </div>
 
         {/* Validate button */}
-        <div className="p-4 shrink-0 mt-auto bg-card/50 border-t border-border/30">
+        <div className="p-4 shrink-0 mt-auto bg-card border-t border-border/30">
           <Button
             className="w-full h-11 sm:h-12 bg-primary hover:bg-primary/90 text-sm sm:text-base font-bold shadow-lg transition-all active:scale-[0.98]"
             disabled={!position || validateMutation.isPending || stepValidated}
@@ -338,7 +338,7 @@ export function HuntPlayPage() {
         )}
 
         {/* Quick hint tag overlay on mobile corner */}
-        <div className="absolute top-3 left-3 z-[1000] bg-background/90 backdrop-blur py-1 px-2.5 rounded-md border border-border shadow-md md:hidden pointer-events-none">
+        <div className="absolute top-3 left-3 z-[1000] bg-card py-1 px-2.5 rounded-md border border-border shadow-md md:hidden pointer-events-none">
           <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Carte en direct</span>
         </div>
       </div>

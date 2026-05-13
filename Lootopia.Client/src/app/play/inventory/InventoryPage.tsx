@@ -50,7 +50,7 @@ export function InventoryPage() {
   const total = data?.pages[0]?.totalCount ?? 0;
 
   return (
-    <div className="h-full flex flex-col gap-4 p-4 bg-slate-950 overflow-y-auto">
+    <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">
       <h1 className="text-xl font-bold text-foreground">Inventaire</h1>
 
       <Tabs defaultValue="type" className="space-y-4">
@@ -119,7 +119,7 @@ export function InventoryPage() {
             {items.map((item) => (
               <Card
                 key={item.itemId}
-                className="border-border bg-card/80 overflow-hidden transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10"
+                className="border-border bg-card overflow-hidden transition-all hover:border-primary/50"
               >
                 <div className="aspect-square bg-muted flex items-center justify-center">
                   {item.imageUrl ? (

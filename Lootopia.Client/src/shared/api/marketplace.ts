@@ -36,6 +36,7 @@ export const marketplaceApi = {
   purchase: (listingId: string) =>
     apiFetch<void>(`/marketplace/listings/${listingId}/purchase`, {
       method: "POST",
+      body: JSON.stringify({ quantity: 1 }),
     }),
 
   create: (itemId: string, price: number) =>
