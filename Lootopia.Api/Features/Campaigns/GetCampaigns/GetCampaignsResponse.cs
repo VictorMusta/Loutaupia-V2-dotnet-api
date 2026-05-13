@@ -17,4 +17,12 @@ public record CampaignDto(
     string Status,
     DateTime? StartDate,
     DateTime? EndDate,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    int StartedCount,
+    int CompletedCount,
+    int CouponsDistributed,
+    int MaxCoupons,
+    double AverageCompletionMinutes,
+    IReadOnlyList<DailyTrackingDto> DailyTracking);
+
+public record DailyTrackingDto(string Date, int Explorations);
