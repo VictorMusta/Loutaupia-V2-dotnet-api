@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import { useQuery } from "@tanstack/react-query";
 import L from "leaflet";
-import { Star, MapPin, Bug, Clock, Gift, Compass, List, Map as MapIcon, ChevronRight } from "lucide-react";
+import { Star, MapPin, Bug, Clock, Compass, List, Map as MapIcon, ChevronRight } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { huntsApi } from "@/shared/api/hunts";
@@ -76,78 +76,6 @@ function MapDebugClickHandler({
   return null;
 }
 
-// Composant de miniature graphique animée simulant le tracé du parcours de la chasse
-function MiniRouteMapPreview({ difficulty, seed }: { difficulty: number; seed: string }) {
-  const color = getMarkerColor(difficulty);
-  // Générer des points déterministes basés sur le seed/titre pour simuler un tracé unique
-  const numPts = Math.min(5, difficulty + 2);
-  const hash = seed.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  
-  const pts = useMemo(() => {
-    const list = [];
-    let curX = 15;
-    let curY = 40;
-    list.push([curX, curY]);
-    for (let i = 1; i < numPts; i++) {
-      curX += 20 + ((hash + i * 13) % 15);
-      curY = 20 + ((hash + i * 27) % 30);
-      list.push([curX, curY]);
-    }
-    return list;
-  }, [numPts, hash]);
-
-  const pathD = pts.reduce((acc, pt, i) => acc + `${i === 0 ? 'M' : 'L'} ${pt[0]} ${pt[1]}`, "");
-
-  return (
-    <div className="w-24 h-16 rounded-md bg-secondary/40 border border-border flex items-center justify-center relative overflow-hidden shrink-0">
-      <svg className="w-full h-full absolute inset-0" viewBox="0 0 120 60">
-        {/* Grille pointillée de fond */}
-        <pattern id="dotGrid" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
-          <circle cx="2" cy="2" r="0.5" className="fill-muted-foreground/30" />
-        </pattern>
-        <rect width="120" height="60" fill="url(#dotGrid)" />
-
-        {/* Ligne du tracé */}
-        <path
-          d={pathD}
-          fill="none"
-          stroke={color}
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="opacity-75 stroke-[2.5]"
-        />
-
-        {/* Trace pointillée animée par-dessus */}
-        <path
-          d={pathD}
-          fill="none"
-          stroke="white"
-          strokeWidth="1.5"
-          strokeDasharray="4 4"
-          className="animate-[dash_8s_linear_infinite] opacity-90"
-        />
-
-        {/* Nœuds waypoints */}
-        {pts.map((pt, index) => (
-          <circle
-            key={index}
-            cx={pt[0]}
-            cy={pt[1]}
-            r={index === pts.length - 1 ? "4" : "2.5"}
-            fill={index === pts.length - 1 ? "#f59e0b" : color}
-            stroke="white"
-            strokeWidth="1"
-            className={index === pts.length - 1 ? "animate-pulse" : ""}
-          />
-        ))}
-      </svg>
-      <span className="absolute bottom-0.5 right-1 text-[8px] font-bold text-muted-foreground/80 bg-background/60 px-1 rounded">
-        {numPts} étapes
-      </span>
-    </div>
-  );
-}
 
 export function HuntMapPage() {
   const navigate = useNavigate();
@@ -242,7 +170,6 @@ export function HuntMapPage() {
         <div className="space-y-3">
           {hunts?.map((hunt) => {
             const estimatedDurationMinutes = hunt.difficulty * 6 + 5;
-            const rewardColor = getMarkerColor(hunt.difficulty);
 
             return (
               <div
@@ -270,24 +197,20 @@ export function HuntMapPage() {
                   </Badge>
                 </div>
 
-                {/* Corps central avec miniature du tracé et indicateurs de temps */}
-                <div className="flex items-center gap-3 bg-background/50 p-2 rounded-lg border border-border/40">
-                  <MiniRouteMapPreview difficulty={hunt.difficulty} seed={hunt.title} />
+                {/* Corps central avec indicateurs d'étapes et de temps */}
+                <div className="grid grid-cols-2 gap-2 bg-background/50 p-2.5 rounded-lg border border-border/40 text-xs">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Compass className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="truncate text-[11px]">
+                      <strong className="text-foreground">{Math.min(5, hunt.difficulty + 2)} étapes</strong> à valider
+                    </span>
+                  </div>
 
-                  <div className="flex-1 min-w-0 space-y-1.5 justify-center flex flex-col">
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Clock className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                      <span className="truncate text-[11px]">
-                        Temps moyen : <strong className="text-foreground">~{estimatedDurationMinutes} min</strong>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Gift className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                      <span className="truncate text-[11px]">
-                        Récompenses assurées
-                      </span>
-                    </div>
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                    <span className="truncate text-[11px]">
+                      Durée : <strong className="text-foreground">~{estimatedDurationMinutes} min</strong>
+                    </span>
                   </div>
                 </div>
 
