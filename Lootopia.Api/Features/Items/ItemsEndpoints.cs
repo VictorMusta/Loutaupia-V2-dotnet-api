@@ -27,33 +27,38 @@ public static class ItemsEndpoints
         .WithSummary("List all custom items available in the catalog")
         .RequireAuthorization();
 
-        group.MapPost("/", async ([FromBody] CreateItemRequest request, IMediator mediator, CancellationToken cancellationToken) =>
-        {
-            var rarityEnum = Enum.TryParse<Domain.Enums.ItemRarity>(request.Rarity, true, out var r) ? r : Domain.Enums.ItemRarity.Common;
-            var typeEnum = Enum.TryParse<Domain.Enums.ItemType>(request.Type, true, out var t) ? t : Domain.Enums.ItemType.Artifact;
-
-            var result = await mediator.Send(new CreateItemCommand(
-                request.Name,
-                request.Description,
-                rarityEnum,
-                typeEnum,
-                request.ImageUrl,
-                request.IsTradeable), cancellationToken);
-
-            return result.IsSuccess
-                ? HttpResults.Created($"/api/items/{result.Value.ItemId}", result.Value)
-                : result.ToHttpResult();
-        })
+        group.MapPost("/", CreateItem)
         .WithName("CreateItem")
         .WithSummary("Create a new item object (Admin only)")
         .RequireAuthorization("Admin");
     }
 
-    private record CreateItemRequest(
-        string Name,
-        string Description,
-        string Rarity,
-        string Type,
-        string? ImageUrl,
-        bool IsTradeable);
+    private static async Task<IResult> CreateItem(
+        CreateItemRequest request,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var rarityEnum = Enum.TryParse<Domain.Enums.ItemRarity>(request.Rarity, true, out var r) ? r : Domain.Enums.ItemRarity.Common;
+        var typeEnum = Enum.TryParse<Domain.Enums.ItemType>(request.Type, true, out var t) ? t : Domain.Enums.ItemType.Artifact;
+
+        var result = await mediator.Send(new CreateItemCommand(
+            request.Name,
+            request.Description,
+            rarityEnum,
+            typeEnum,
+            request.ImageUrl,
+            request.IsTradeable), cancellationToken);
+
+        return result.IsSuccess
+            ? result.ToCreatedHttpResult($"/api/items/{result.Value.ItemId}")
+            : result.ToHttpResult();
+    }
 }
+
+internal sealed record CreateItemRequest(
+    string Name,
+    string Description,
+    string Rarity,
+    string Type,
+    string? ImageUrl,
+    bool IsTradeable);
