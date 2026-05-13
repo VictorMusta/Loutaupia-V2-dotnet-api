@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useCallback } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
-import type { LatLngLiteral } from "leaflet";
+import { useState, useCallback, useEffect, Fragment } from "react";
+import { createPortal } from "react-dom";
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Circle, useMap, Polyline } from "react-leaflet";
+import L, { type LatLngLiteral } from "leaflet";
 import { huntsApi } from "@/shared/api/hunts";
 import { itemsApi } from "@/shared/api/items";
 import { Button } from "@/shared/components/ui/button";
@@ -19,7 +20,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Badge } from "@/shared/components/ui/badge";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useToast } from "@/shared/components/ui/toast";
-import { Plus, MapPin, Play, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { Plus, MapPin, Play, ChevronDown, ChevronUp, Trash2, Check, Maximize2, GripVertical } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 
 interface HuntStepForm {
@@ -155,6 +156,52 @@ export function AdminHuntsPage() {
   );
 }
 
+const createStepIcon = (number: number) =>
+  L.divIcon({
+    className: "custom-step-icon",
+    html: `<div class="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-primary-foreground font-bold text-xs border-2 border-background shadow-md">${number}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  });
+
+const createArrowIcon = (angle: number) =>
+  L.divIcon({
+    className: "custom-arrow-icon bg-transparent border-0",
+    html: `<div class="flex items-center justify-center w-6 h-6 text-primary drop-shadow-md" style="transform: rotate(${angle}deg);">
+             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+           </div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+
+function MapFitBounds({ steps }: { steps: HuntStepForm[] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (steps.length === 0) return;
+    if (steps.length === 1) {
+      map.setView([steps[0].latitude, steps[0].longitude], 14);
+      return;
+    }
+    const bounds = L.latLngBounds(steps.map((s) => [s.latitude, s.longitude]));
+    map.fitBounds(bounds, { padding: [40, 40] });
+  }, [map, steps]);
+  return null;
+}
+
+function MapFitBoundsInitial({ steps }: { steps: HuntStepForm[] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (steps.length === 0) return;
+    if (steps.length === 1) {
+      map.setView([steps[0].latitude, steps[0].longitude], 14);
+      return;
+    }
+    const bounds = L.latLngBounds(steps.map((s) => [s.latitude, s.longitude]));
+    map.fitBounds(bounds, { padding: [40, 40] });
+  }, [map]);
+  return null;
+}
+
 function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -166,6 +213,8 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
   const [rewardItemId, setRewardItemId] = useState<string | null>(null);
   const [steps, setSteps] = useState<HuntStepForm[]>([]);
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
+  const [draggedStepIndex, setDraggedStepIndex] = useState<number | null>(null);
   const center: LatLngLiteral = { lat: 48.8566, lng: 2.3522 };
 
   const { data: items = [] } = useQuery({
@@ -288,7 +337,14 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
           Create hunt
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+        className="max-w-4xl max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(e) => {
+          if (isMapExpanded) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Create hunt</DialogTitle>
           <DialogDescription>
@@ -370,27 +426,160 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
 
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">Step editor — click map to add waypoints</p>
-            <div className="h-64 rounded-lg overflow-hidden border border-border">
+            <div className="relative h-64 rounded-lg overflow-hidden border border-border group cursor-pointer">
               <MapContainer
                 center={[center.lat, center.lng]}
                 zoom={13}
-                className="h-full w-full"
+                doubleClickZoom={false}
+                className="h-full w-full pointer-events-none"
                 style={{ minHeight: 256 }}
               >
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                <MapClickHandler onMapClick={handleMapClick} />
-                {steps.map((step, i) => (
-                  <Marker key={i} position={[step.latitude, step.longitude]}>
-                    <Popup>
-                      Step {i + 1}: {step.clue || "(no clue)"}
-                    </Popup>
-                  </Marker>
-                ))}
+                <MapFitBounds steps={steps} />
+                {steps.length >= 2 && (
+                  <Polyline 
+                    positions={steps.map((s) => [s.latitude, s.longitude])}
+                    pathOptions={{ color: "#10b981", weight: 4, opacity: 0.85 }}
+                  />
+                )}
+                {steps.map((step, i) => {
+                  const nextStep = steps[i + 1];
+                  let arrowEl = null;
+                  if (nextStep) {
+                    const midLat = (step.latitude + nextStep.latitude) / 2;
+                    const midLng = (step.longitude + nextStep.longitude) / 2;
+                    const angle = Math.atan2(step.latitude - nextStep.latitude, nextStep.longitude - step.longitude) * (180 / Math.PI);
+                    arrowEl = <Marker position={[midLat, midLng]} icon={createArrowIcon(angle)} />;
+                  }
+                  return (
+                    <Fragment key={i}>
+                      {arrowEl}
+                      <Circle 
+                        center={[step.latitude, step.longitude]} 
+                        radius={step.radiusMeters}
+                        pathOptions={{ color: "hsl(var(--primary))", fillColor: "hsl(var(--primary))", fillOpacity: 0.2, weight: 2 }} 
+                      />
+                      <Marker 
+                        position={[step.latitude, step.longitude]}
+                        icon={createStepIcon(i + 1)}
+                      >
+                        <Popup>
+                          Étape #{i + 1} : {step.clue || "(sans indice)"}
+                          <br />
+                          Rayon : {step.radiusMeters}m
+                        </Popup>
+                      </Marker>
+                    </Fragment>
+                  );
+                })}
               </MapContainer>
+              <div 
+                className="absolute inset-0 bg-background/20 hover:bg-background/40 transition-colors flex items-center justify-center z-[500]"
+                onClick={() => setIsMapExpanded(true)}
+              >
+                <Badge variant="secondary" className="px-3 py-1.5 text-sm gap-1.5 shadow-md border border-border/50 pointer-events-none">
+                  <Maximize2 className="h-4 w-4" />
+                  Cliquez pour agrandir et placer les points
+                </Badge>
+              </div>
             </div>
+
+            {isMapExpanded && createPortal(
+              <div 
+                className="fixed inset-0 z-[100000] bg-background/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in-50 duration-200"
+                style={{ pointerEvents: "auto" }}
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) setIsMapExpanded(false);
+                }}
+              >
+                <div 
+                  className="relative w-full max-w-5xl h-[85vh] rounded-2xl overflow-hidden border-2 border-border shadow-2xl bg-card flex flex-col animate-in zoom-in-95 duration-200"
+                  style={{ pointerEvents: "auto" }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="absolute top-4 left-4 z-[1000] bg-background/90 backdrop-blur-sm border border-border px-4 py-2 rounded-xl shadow-md pointer-events-none">
+                    <p className="text-sm font-semibold text-foreground">
+                      📍 Mode Placement — Cliquez sur la carte pour ajouter/déplacer une étape
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {editingStepIndex !== null ? `Modification de l'étape #${editingStepIndex + 1}` : `Étape en cours d'ajout : #${steps.length + 1}`}
+                    </p>
+                  </div>
+
+                  <MapContainer
+                    center={[center.lat, center.lng]}
+                    zoom={14}
+                    doubleClickZoom={false}
+                    className="h-full w-full flex-1"
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <MapFitBoundsInitial steps={steps} />
+                    <MapClickHandler onMapClick={handleMapClick} />
+                    {steps.length >= 2 && (
+                      <Polyline 
+                        positions={steps.map((s) => [s.latitude, s.longitude])}
+                        pathOptions={{ color: "#10b981", weight: 4, opacity: 0.85 }}
+                      />
+                    )}
+                    {steps.map((step, i) => {
+                      const nextStep = steps[i + 1];
+                      let arrowEl = null;
+                      if (nextStep) {
+                        const midLat = (step.latitude + nextStep.latitude) / 2;
+                        const midLng = (step.longitude + nextStep.longitude) / 2;
+                        const angle = Math.atan2(step.latitude - nextStep.latitude, nextStep.longitude - step.longitude) * (180 / Math.PI);
+                        arrowEl = <Marker position={[midLat, midLng]} icon={createArrowIcon(angle)} />;
+                      }
+                      return (
+                        <Fragment key={i}>
+                          {arrowEl}
+                          <Circle 
+                            center={[step.latitude, step.longitude]} 
+                            radius={step.radiusMeters}
+                            pathOptions={{ color: "hsl(var(--primary))", fillColor: "hsl(var(--primary))", fillOpacity: 0.2, weight: 2 }} 
+                          />
+                          <Marker 
+                            position={[step.latitude, step.longitude]}
+                            icon={createStepIcon(i + 1)}
+                            draggable={true}
+                            eventHandlers={{
+                              dragend: (e) => {
+                                const marker = e.target;
+                                const pos = marker.getLatLng();
+                                updateStep(i, "latitude", pos.lat);
+                                updateStep(i, "longitude", pos.lng);
+                              }
+                            }}
+                          >
+                            <Popup>
+                              Étape #{i + 1} : {step.clue || "(sans indice)"}
+                              <br />
+                              Rayon : {step.radiusMeters}m
+                            </Popup>
+                          </Marker>
+                        </Fragment>
+                      );
+                    })}
+                  </MapContainer>
+
+                  <Button
+                    size="icon"
+                    className="absolute bottom-6 right-6 z-[1000] h-14 w-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl border-2 border-white/20 transition-all hover:scale-110"
+                    onClick={() => setIsMapExpanded(false)}
+                    title="Valider et fermer la carte"
+                  >
+                    <Check className="h-7 w-7 stroke-[2.5]" />
+                  </Button>
+                </div>
+              </div>,
+              document.body
+            )}
           </div>
         </div>
 
@@ -400,12 +589,28 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
             {steps.map((step, i) => (
               <div
                 key={i}
+                draggable={true}
+                onDragStart={() => setDraggedStepIndex(i)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => {
+                  if (draggedStepIndex !== null && draggedStepIndex !== i) {
+                    setSteps((prev) => {
+                      const next = [...prev];
+                      const item = next.splice(draggedStepIndex, 1)[0];
+                      next.splice(i, 0, item);
+                      return next;
+                    });
+                  }
+                  setDraggedStepIndex(null);
+                }}
                 className={cn(
-                  "flex flex-wrap items-center gap-2 rounded-lg border p-3",
-                  editingStepIndex === i ? "border-primary bg-primary/5" : "border-border",
+                  "flex flex-wrap items-center gap-2 rounded-lg border p-3 transition-all cursor-move",
+                  editingStepIndex === i ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
+                  draggedStepIndex === i ? "opacity-40 border-dashed" : ""
                 )}
               >
-                <span className="text-muted-foreground font-medium">#{i + 1}</span>
+                <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground font-medium shrink-0">#{i + 1}</span>
                 <Input
                   value={step.clue}
                   onChange={(e) => updateStep(i, "clue", e.target.value)}
@@ -418,11 +623,17 @@ function CreateHuntDialog({ onSuccess }: { onSuccess: () => void }) {
                   onChange={(e) => updateStep(i, "radiusMeters", Number(e.target.value) || 50)}
                   placeholder="Radius (m)"
                   className="w-20 bg-background"
+                  title="Rayon en mètres"
                 />
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setEditingStepIndex(editingStepIndex === i ? null : i)}
+                  onClick={() => {
+                    const nextEditing = editingStepIndex === i ? null : i;
+                    setEditingStepIndex(nextEditing);
+                    if (nextEditing !== null) setIsMapExpanded(true);
+                  }}
+                  title="Modifier les coordonnées sur la carte"
                 >
                   <MapPin className="h-4 w-4" />
                 </Button>
