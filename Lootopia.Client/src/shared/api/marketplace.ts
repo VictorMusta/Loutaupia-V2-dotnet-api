@@ -21,11 +21,23 @@ interface ListingsResponse {
   size: number;
 }
 
+export interface ListingsParams {
+  type?: string;
+  rarity?: string;
+  name?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sort?: string;
+}
+
 export const marketplaceApi = {
-  listings: async (params?: { type?: string; rarity?: string; sort?: string }): Promise<Listing[]> => {
+  listings: async (params?: ListingsParams): Promise<Listing[]> => {
     const qs = new URLSearchParams();
     if (params?.type) qs.set("type", params.type);
     if (params?.rarity) qs.set("rarity", params.rarity);
+    if (params?.name) qs.set("name", params.name);
+    if (params?.minPrice !== undefined) qs.set("minPrice", String(params.minPrice));
+    if (params?.maxPrice !== undefined) qs.set("maxPrice", String(params.maxPrice));
     if (params?.sort) qs.set("sort", params.sort);
     qs.set("size", "100");
     const q = qs.toString();
