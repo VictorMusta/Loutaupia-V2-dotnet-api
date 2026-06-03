@@ -1,7 +1,9 @@
 import { NavLink, Outlet } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import { Map, Backpack, Store, Trophy, User, Wallet, Bell } from "lucide-react";
 import { useAuth } from "@/shared/providers/AuthProvider";
-import { cn } from "@/shared/lib/utils";
+import { walletApi } from "@/shared/api/wallet";
+import { cn, formatCurrency } from "@/shared/lib/utils";
 
 const navItems = [
   { to: "/play/hunts", icon: Map, label: "Chasses" },
@@ -14,13 +16,27 @@ const navItems = [
 export function MobileLayout() {
   const { user } = useAuth();
 
+  const { data: wallet } = useQuery({
+    queryKey: ["wallet"],
+    queryFn: () => walletApi.get(),
+    enabled: !!user,
+  });
+
   return (
     <div className="flex flex-col h-dvh bg-background">
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
         <h1 className="text-lg font-bold text-primary">Lootopia</h1>
         <div className="flex items-center gap-3">
-          <NavLink to="/play/wallet" className="flex items-center gap-1 text-sm text-gold">
-            <Wallet className="h-4 w-4" />
+          <NavLink
+            to="/play/wallet"
+            className="flex items-center gap-1 text-sm font-semibold text-gold"
+          >
+            <Wallet className="h-4 w-4 shrink-0" />
+            {wallet && (
+              <span className="truncate max-w-[72px]">
+                {formatCurrency(wallet.balance)}
+              </span>
+            )}
           </NavLink>
           <NavLink to="/play/notifications" className="relative">
             <Bell className="h-5 w-5 text-muted-foreground" />

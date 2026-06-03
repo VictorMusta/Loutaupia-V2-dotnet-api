@@ -90,6 +90,9 @@ public static class MarketplaceEndpoints
         [FromServices] IMediator mediator,
         [FromQuery] string? type,
         [FromQuery] string? rarity,
+        [FromQuery] string? name,
+        [FromQuery] decimal? minPrice,
+        [FromQuery] decimal? maxPrice,
         [FromQuery] string? sort,
         [FromQuery] int page = 1,
         [FromQuery] int size = 20,
@@ -98,7 +101,9 @@ public static class MarketplaceEndpoints
         var itemType = Enum.TryParse<ItemType>(type, true, out var t) ? t : (ItemType?)null;
         var itemRarity = Enum.TryParse<ItemRarity>(rarity, true, out var r) ? r : (ItemRarity?)null;
 
-        var result = await mediator.Send(new ListListingsQuery(itemType, itemRarity, sort, page, size), cancellationToken);
+        var result = await mediator.Send(
+            new ListListingsQuery(itemType, itemRarity, name, minPrice, maxPrice, sort, page, size),
+            cancellationToken);
         return result.ToHttpResult();
     }
 
@@ -114,7 +119,8 @@ public static class MarketplaceEndpoints
             return HttpResults.Unauthorized();
 
         var result = await mediator.Send(
-            new ListListingsQuery(null, null, "created_desc", page, size, userId), cancellationToken);
+            new ListListingsQuery(null, null, null, null, null, "created_desc", page, size, userId),
+            cancellationToken);
         return result.ToHttpResult();
     }
 

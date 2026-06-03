@@ -23,6 +23,12 @@ public sealed class ListListingsHandler(LootopiaDbContext db) : IRequestHandler<
             query = query.Where(l => l.Item.Type == request.Type.Value);
         if (request.Rarity.HasValue)
             query = query.Where(l => l.Item.Rarity == request.Rarity.Value);
+        if (!string.IsNullOrWhiteSpace(request.Name))
+            query = query.Where(l => l.Item.Name.ToLower().Contains(request.Name.ToLower()));
+        if (request.MinPrice.HasValue)
+            query = query.Where(l => l.Price >= request.MinPrice.Value);
+        if (request.MaxPrice.HasValue)
+            query = query.Where(l => l.Price <= request.MaxPrice.Value);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -30,6 +36,8 @@ public sealed class ListListingsHandler(LootopiaDbContext db) : IRequestHandler<
         {
             "price_asc" => query.OrderBy(l => l.Price),
             "price_desc" => query.OrderByDescending(l => l.Price),
+            "name_asc" => query.OrderBy(l => l.Item.Name),
+            "name_desc" => query.OrderByDescending(l => l.Item.Name),
             "created_desc" => query.OrderByDescending(l => l.CreatedAt),
             _ => query.OrderBy(l => l.CreatedAt)
         };
