@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, ShoppingCart, Plus } from "lucide-react";
+import { Package, ShoppingCart, Plus, Search } from "lucide-react";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -27,9 +27,25 @@ const RARITY_COLORS: Record<string, string> = {
   Legendary: "bg-amber-500",
 };
 
+const RARITIES = ["Common", "Rare", "Epic", "Legendary"] as const;
+
+const SORT_OPTIONS = [
+  { value: "", label: "Plus récents" },
+  { value: "price_asc", label: "Prix croissant" },
+  { value: "price_desc", label: "Prix décroissant" },
+  { value: "name_asc", label: "Nom A-Z" },
+  { value: "name_desc", label: "Nom Z-A" },
+] as const;
+
 export function MarketplacePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [nameSearch, setNameSearch] = useState("");
+  const [debouncedName, setDebouncedName] = useState("");
+  const [rarityFilter, setRarityFilter] = useState<string | undefined>();
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [sort, setSort] = useState("");
   const [confirmListing, setConfirmListing] = useState<{
     id: string;
     itemName: string;
@@ -39,9 +55,22 @@ export function MarketplacePage() {
   const [sellPrice, setSellPrice] = useState("");
   const [sellStock, setSellStock] = useState("1");
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedName(nameSearch), 300);
+    return () => clearTimeout(t);
+  }, [nameSearch]);
+
+  const listingFilters = {
+    name: debouncedName || undefined,
+    rarity: rarityFilter,
+    minPrice: minPrice ? parseFloat(minPrice) : undefined,
+    maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
+    sort: sort || undefined,
+  };
+
   const { data: listings, isLoading: listingsLoading } = useQuery({
-    queryKey: ["marketplace", "listings"],
-    queryFn: () => marketplaceApi.listings(),
+    queryKey: ["marketplace", "listings", listingFilters],
+    queryFn: () => marketplaceApi.listings(listingFilters),
   });
 
   const { data: myListings, isLoading: myListingsLoading } = useQuery({
@@ -119,6 +148,69 @@ export function MarketplacePage() {
         </TabsList>
 
         <TabsContent value="buy" className="mt-4 space-y-4">
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher par nom..."
+                value={nameSearch}
+                onChange={(e) => setNameSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={!rarityFilter ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRarityFilter(undefined)}
+              >
+                Toutes
+              </Button>
+              {RARITIES.map((r) => (
+                <Button
+                  key={r}
+                  variant={rarityFilter === r ? "default" : "outline"}
+                  size="sm"
+                  onClick={() =>
+                    setRarityFilter(rarityFilter === r ? undefined : r)
+                  }
+                >
+                  {r}
+                </Button>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                min="0"
+                placeholder="Prix min"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+              />
+              <Input
+                type="number"
+                min="0"
+                placeholder="Prix max"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+              />
+            </div>
+
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {listingsLoading ? (
             <div className="grid grid-cols-1 gap-3">
               {[...Array(4)].map((_, i) => (
