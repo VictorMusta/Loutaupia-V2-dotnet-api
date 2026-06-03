@@ -57,7 +57,7 @@ export function ProfilePage() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {achievements?.map((a) => (
               <Card
                 key={a.id}
@@ -67,9 +67,9 @@ export function ProfilePage() {
                     : "bg-muted/50 border-border opacity-60"
                 }`}
               >
-                <CardContent className="p-3 text-center">
+                <CardContent className="p-4 flex gap-3">
                   <div
-                    className={`w-12 h-12 mx-auto rounded-lg mb-2 flex items-center justify-center ${
+                    className={`w-12 h-12 shrink-0 rounded-lg flex items-center justify-center ${
                       a.isUnlocked ? "bg-primary/20" : "bg-muted"
                     }`}
                   >
@@ -77,13 +77,18 @@ export function ProfilePage() {
                       {a.isUnlocked ? "🏆" : "🔒"}
                     </span>
                   </div>
-                  <p
-                    className={`text-xs font-medium truncate ${
-                      a.isUnlocked ? "text-foreground" : "text-muted-foreground"
-                    }`}
-                  >
-                    {a.name}
-                  </p>
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={`text-sm font-medium ${
+                        a.isUnlocked ? "text-foreground" : "text-muted-foreground"
+                      }`}
+                    >
+                      {a.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                      {a.description}
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             ))}
