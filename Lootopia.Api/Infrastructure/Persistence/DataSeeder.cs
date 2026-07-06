@@ -28,7 +28,7 @@ public static class DataSeeder
             {
                 Id = AdminId,
                 Email = "admin@gmail.com",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin"),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123456"),
                 DisplayName = "admin",
                 Role = UserRole.Admin,
                 IsGuest = false,
@@ -41,7 +41,7 @@ public static class DataSeeder
         {
             // If the admin user already exists, just update their credentials
             adminUser.Email = "admin@gmail.com";
-            adminUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin");
+            adminUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123456");
             adminUser.DisplayName = "admin";
         }
 
