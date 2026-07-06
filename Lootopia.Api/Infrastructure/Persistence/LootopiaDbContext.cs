@@ -32,6 +32,7 @@ public class LootopiaDbContext(DbContextOptions<LootopiaDbContext> options)
     public DbSet<PlayerAchievement> PlayerAchievements => Set<PlayerAchievement>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -243,6 +244,11 @@ public class LootopiaDbContext(DbContextOptions<LootopiaDbContext> options)
             e.HasKey(np => np.Id);
             e.HasOne(np => np.User).WithMany(u => u.NotificationPreferences).HasForeignKey(np => np.UserId);
             e.HasIndex(np => new { np.UserId, np.Category }).IsUnique();
+        });
+
+        modelBuilder.Entity<SystemSetting>(e =>
+        {
+            e.HasKey(s => s.Key);
         });
     }
 }

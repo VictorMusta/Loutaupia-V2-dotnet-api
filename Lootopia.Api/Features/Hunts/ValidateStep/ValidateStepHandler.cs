@@ -13,7 +13,8 @@ namespace Lootopia.Api.Features.Hunts.ValidateStep;
 public sealed class ValidateStepHandler(
     LootopiaDbContext db,
     IGeoValidator geoValidator,
-    IWalletService walletService)
+    IWalletService walletService,
+    IFraudDetector fraudDetector)
     : IRequestHandler<ValidateStepCommand, Result<ValidateStepResponse>>
 {
     public async Task<Result<ValidateStepResponse>> Handle(
@@ -146,6 +147,21 @@ public sealed class ValidateStepHandler(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+
+        // Détection de fraude (synchrone pour éviter les problèmes de scope/DbContext)
+        try
+        {
+            await fraudDetector.CheckForAnomaliesAsync(
+                request.PlayerId,
+                request.Latitude,
+                request.Longitude,
+                DateTime.UtcNow,
+                cancellationToken);
+        }
+        catch
+        {
+            // Ignorer les erreurs de détection de fraude pour ne pas impacter le joueur
+        }
 
         return Result.Success(new ValidateStepResponse(
             true,

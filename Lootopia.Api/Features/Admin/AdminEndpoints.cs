@@ -30,6 +30,19 @@ public static class AdminEndpoints
         .RequireAuthorization(policy => policy.RequireRole("Admin"))
         .WithName("GetFraudAlerts");
 
+        app.MapPost("/api/admin/fraud-alerts/{alertId:guid}/acknowledge", async (Guid alertId, LootopiaDbContext db, CancellationToken ct) =>
+        {
+            var alert = await db.FraudAlerts.FirstOrDefaultAsync(a => a.Id == alertId, ct);
+            if (alert == null) return HttpResults.NotFound();
+            
+            alert.Status = Domain.Enums.FraudAlertStatus.Acknowledged;
+            await db.SaveChangesAsync(ct);
+            return HttpResults.Ok();
+        })
+        .WithTags("Admin")
+        .RequireAuthorization(policy => policy.RequireRole("Admin"))
+        .WithName("AcknowledgeFraudAlert");
+
         app.MapPost("/api/admin/users/{userId:guid}/freeze", async (Guid userId, IMediator mediator) =>
         {
             var result = await mediator.Send(new FreezeUserCommand(userId));
@@ -101,6 +114,68 @@ public static class AdminEndpoints
         .WithTags("Admin")
         .RequireAuthorization(policy => policy.RequireRole("Admin"))
         .WithName("GetAdminActivityReport");
+
+        app.MapGet("/api/admin/fraud-settings", async (LootopiaDbContext db, CancellationToken ct) =>
+        {
+            var defaultSettings = new Dictionary<string, string>
+            {
+                { "Fraud_ThresholdCount", "5" },
+                { "Fraud_TimeWindowSeconds", "60" },
+                { "Fraud_RadiusMeters", "50" }
+            };
+
+            var settings = await db.SystemSettings
+                .Where(s => s.Key.StartsWith("Fraud_"))
+                .ToListAsync(ct);
+
+            foreach (var s in settings)
+            {
+                if (defaultSettings.ContainsKey(s.Key))
+                {
+                    defaultSettings[s.Key] = s.Value;
+                }
+            }
+
+            return HttpResults.Ok(defaultSettings);
+        })
+        .WithTags("Admin")
+        .RequireAuthorization(policy => policy.RequireRole("Admin"))
+        .WithName("GetFraudSettings");
+
+        app.MapPut("/api/admin/fraud-settings", async (
+            Dictionary<string, string> request,
+            LootopiaDbContext db,
+            Microsoft.Extensions.Caching.Memory.IMemoryCache cache,
+            CancellationToken ct) =>
+        {
+            foreach (var kvp in request)
+            {
+                if (!kvp.Key.StartsWith("Fraud_")) continue;
+                
+                var setting = await db.SystemSettings.FirstOrDefaultAsync(s => s.Key == kvp.Key, ct);
+                if (setting == null)
+                {
+                    db.SystemSettings.Add(new Domain.Entities.SystemSetting
+                    {
+                        Key = kvp.Key,
+                        Value = kvp.Value,
+                        UpdatedAt = DateTime.UtcNow
+                    });
+                }
+                else
+                {
+                    setting.Value = kvp.Value;
+                    setting.UpdatedAt = DateTime.UtcNow;
+                }
+                
+                cache.Remove(kvp.Key);
+            }
+            await db.SaveChangesAsync(ct);
+            return HttpResults.Ok();
+        })
+        .WithTags("Admin")
+        .RequireAuthorization(policy => policy.RequireRole("Admin"))
+        .WithName("UpdateFraudSettings");
     }
 
     private static async Task<IResult> CreditPartnerBudget(

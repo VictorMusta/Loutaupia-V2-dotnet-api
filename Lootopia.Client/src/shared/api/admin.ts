@@ -64,4 +64,13 @@ export const adminApi = {
       completionsPerWeek: { week: string; count: number }[];
     }>(`/admin/report${q ? `?${q}` : ""}`);
   },
+
+  getFraudSettings: () =>
+    apiFetch<Record<string, string>>(`/admin/fraud-settings`),
+
+  updateFraudSettings: (settings: Record<string, string>) =>
+    apiFetch<void>(`/admin/fraud-settings`, {
+      method: "PUT",
+      body: JSON.stringify(settings),
+    }),
 };
