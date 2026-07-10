@@ -148,7 +148,19 @@ export function GeolocationProvider({ children }: { children: ReactNode }) {
       raf = requestAnimationFrame(tick);
     };
 
+    // Let ZQSD/arrows through when the user is typing in a form field
+    const isTypingTarget = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      return (
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        el instanceof HTMLSelectElement ||
+        (el?.isContentEditable ?? false)
+      );
+    };
+
     const onDown = (e: KeyboardEvent) => {
+      if (isTypingTarget(e)) return;
       const key = e.key.toLowerCase();
       if (["z", "q", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
         e.preventDefault();
