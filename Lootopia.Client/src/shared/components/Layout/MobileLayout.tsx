@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Map, Backpack, Store, Trophy, User, Wallet, Bell } from "lucide-react";
+import { Map, Backpack, Store, Trophy, User, Wallet, Bell, LogOut } from "lucide-react";
 import { useAuth } from "@/shared/providers/AuthProvider";
 import { walletApi } from "@/shared/api/wallet";
 import { cn, formatCurrency } from "@/shared/lib/utils";
@@ -14,7 +14,7 @@ const navItems = [
 ];
 
 export function MobileLayout() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const { data: wallet } = useQuery({
     queryKey: ["wallet"],
@@ -42,9 +42,19 @@ export function MobileLayout() {
             <Bell className="h-5 w-5 text-muted-foreground" />
           </NavLink>
           {user && (
-            <span className="text-xs text-muted-foreground truncate max-w-[80px]">
-              {user.displayName}
-            </span>
+            <>
+              <span className="text-xs text-muted-foreground truncate max-w-[80px]">
+                {user.displayName}
+              </span>
+              <button
+                onClick={logout}
+                aria-label="Se déconnecter"
+                title="Se déconnecter"
+                className="text-muted-foreground hover:text-destructive transition-colors"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
+            </>
           )}
         </div>
       </header>

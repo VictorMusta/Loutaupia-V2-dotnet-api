@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { User, LogOut, Mail, Shield } from "lucide-react";
+import { User, Mail, Shield } from "lucide-react";
 import { Card, CardContent } from "@/shared/components/ui/card";
-import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useAuth } from "@/shared/providers/AuthProvider";
 import { achievementsApi } from "@/shared/api/achievements";
@@ -14,7 +13,7 @@ const RARITY_COLORS: Record<string, string> = {
 };
 
 export function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const { data: achievements, isLoading } = useQuery({
     queryKey: ["achievements"],
@@ -96,16 +95,6 @@ export function ProfilePage() {
         )}
       </div>
 
-      <div className="mt-auto pt-4">
-        <Button
-          variant="outline"
-          className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
-          onClick={logout}
-        >
-          <LogOut className="h-5 w-5 mr-2" />
-          Se déconnecter
-        </Button>
-      </div>
     </div>
   );
 }
