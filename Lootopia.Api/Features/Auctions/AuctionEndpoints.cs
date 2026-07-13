@@ -59,7 +59,7 @@ public static class AuctionEndpoints
         .AllowAnonymous()
         .WithName("GetAuction");
 
-        app.MapGet("/api/auctions", async (string? status, int page, int size, IMediator mediator) =>
+        app.MapGet("/api/auctions", async (IMediator mediator, string? status, int page = 1, int size = 20) =>
         {
             var result = await mediator.Send(new ListAuctionsQuery(status, page > 0 ? page : 1, size > 0 ? size : 20));
             return result.ToHttpResult();

@@ -12,6 +12,7 @@ import { HuntMapPage } from "@/app/play/hunt-map/HuntMapPage";
 import { HuntPlayPage } from "@/app/play/hunt-play/HuntPlayPage";
 import { WalletPage } from "@/app/play/wallet/WalletPage";
 import { InventoryPage } from "@/app/play/inventory/InventoryPage";
+import { MarketplaceLayout } from "@/app/play/marketplace/MarketplaceLayout";
 import { MarketplacePage } from "@/app/play/marketplace/MarketplacePage";
 import { TradingPage } from "@/app/play/marketplace/TradingPage";
 import { AuctionsPage } from "@/app/play/marketplace/AuctionsPage";
@@ -63,9 +64,11 @@ export default function App() {
                   <Route path="hunts/:id/play" element={<HuntPlayPage />} />
                   <Route path="wallet" element={<WalletPage />} />
                   <Route path="inventory" element={<InventoryPage />} />
-                  <Route path="marketplace" element={<MarketplacePage />} />
-                  <Route path="marketplace/trading" element={<TradingPage />} />
-                  <Route path="marketplace/auctions" element={<AuctionsPage />} />
+                  <Route path="marketplace" element={<MarketplaceLayout />}>
+                    <Route index element={<MarketplacePage />} />
+                    <Route path="auctions" element={<AuctionsPage />} />
+                    <Route path="trading" element={<TradingPage />} />
+                  </Route>
                   <Route path="leaderboards" element={<LeaderboardsPage />} />
                   <Route path="profile" element={<ProfilePage />} />
                   <Route path="notifications" element={<NotificationsPage />} />

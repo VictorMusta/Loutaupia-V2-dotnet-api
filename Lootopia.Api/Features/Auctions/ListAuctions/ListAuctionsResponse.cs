@@ -7,8 +7,13 @@ public record AuctionSummary(
     Guid SellerId,
     Guid ItemId,
     decimal ReservePrice,
+    decimal MinIncrement,
     DateTime EndTime,
     string Status,
     decimal? CurrentHighestBid,
+    decimal CurrentPrice,
+    int BidCount,
     string? ItemName,
-    string? ItemImageUrl);
+    string? ItemRarity,
+    string? ItemImageUrl,
+    string? SellerName);

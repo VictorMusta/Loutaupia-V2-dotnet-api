@@ -46,7 +46,7 @@ export function AuctionsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [bidAmount, setBidAmount] = useState("");
 
-  const { data: auctions, isLoading } = useQuery({
+  const { data: auctions, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["auctions", "list"],
     queryFn: () => auctionsApi.list(),
   });
@@ -64,6 +64,7 @@ export function AuctionsPage() {
       setBidAmount("");
       queryClient.invalidateQueries({ queryKey: ["auctions"] });
       queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
       toast({ title: "Enchère placée", variant: "success" });
     },
     onError: (err) => {
@@ -87,7 +88,9 @@ export function AuctionsPage() {
       });
       return;
     }
-    const minBid = (auctionDetail?.currentPrice ?? 0) + 1;
+    const minBid =
+      auctionDetail?.minBid ??
+      (auctionDetail?.currentPrice ?? 0) + (auctionDetail?.minIncrement ?? 1);
     if (amount < minBid) {
       toast({
         title: "Erreur",
@@ -101,13 +104,20 @@ export function AuctionsPage() {
 
   return (
     <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">
-      <h1 className="text-xl font-bold text-foreground">Enchères</h1>
-
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
             <Skeleton key={i} className="h-20 rounded-xl" />
           ))}
+        </div>
+      ) : isError ? (
+        <div className="py-12 text-center space-y-3">
+          <p className="text-destructive">
+            {error instanceof Error ? error.message : "Impossible de charger les enchères"}
+          </p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Réessayer
+          </Button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -204,9 +214,13 @@ export function AuctionsPage() {
                     <Input
                       type="number"
                       min={
-                        (auctionDetail.currentPrice ?? 0) + 1
+                        auctionDetail.minBid ??
+                        auctionDetail.currentPrice + auctionDetail.minIncrement
                       }
-                      placeholder="Montant (LTK)"
+                      placeholder={`Min. ${formatCurrency(
+                        auctionDetail.minBid ??
+                          auctionDetail.currentPrice + auctionDetail.minIncrement,
+                      )}`}
                       value={bidAmount}
                       onChange={(e) => setBidAmount(e.target.value)}
                     />

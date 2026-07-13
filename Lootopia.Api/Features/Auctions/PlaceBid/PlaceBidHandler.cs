@@ -1,12 +1,15 @@
 using Lootopia.Api.Domain.Entities;
 using Lootopia.Api.Infrastructure.Persistence;
+using Lootopia.Api.Infrastructure.Services;
 using Lootopia.Api.SharedKernel.Results;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lootopia.Api.Features.Auctions.PlaceBid;
 
-public sealed class PlaceBidHandler(LootopiaDbContext db) : IRequestHandler<PlaceBidCommand, Result<PlaceBidResponse>>
+public sealed class PlaceBidHandler(
+    LootopiaDbContext db,
+    INotificationService notificationService) : IRequestHandler<PlaceBidCommand, Result<PlaceBidResponse>>
 {
     private const int AntiSnipingMinutes = 2;
     private const int ExtensionMinutes = 5;
@@ -15,6 +18,7 @@ public sealed class PlaceBidHandler(LootopiaDbContext db) : IRequestHandler<Plac
     {
         var auction = await db.Auctions
             .Include(a => a.HighestBid)
+            .Include(a => a.Item)
             .FirstOrDefaultAsync(a => a.Id == request.AuctionId, cancellationToken);
 
         if (auction is null)
@@ -58,9 +62,22 @@ public sealed class PlaceBidHandler(LootopiaDbContext db) : IRequestHandler<Plac
             CreatedAt = now
         };
 
+        var previousBidderId = auction.HighestBid?.BidderId;
+
         db.Bids.Add(bid);
         auction.HighestBidId = bid.Id;
         await db.SaveChangesAsync(cancellationToken);
+
+        if (previousBidderId.HasValue && previousBidderId.Value != request.BidderId)
+        {
+            var itemName = auction.Item?.Name ?? "un objet";
+            await notificationService.SendAsync(
+                previousBidderId.Value,
+                "Auction",
+                "Vous avez été surenchéri",
+                $"Quelqu'un a enchéri {request.Amount} LTK sur {itemName}.",
+                cancellationToken);
+        }
 
         return Result.Success(new PlaceBidResponse(bid.Id, bid.Amount, newEndTime));
     }

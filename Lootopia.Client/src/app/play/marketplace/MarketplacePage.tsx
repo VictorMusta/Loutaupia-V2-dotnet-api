@@ -139,8 +139,6 @@ export function MarketplacePage() {
 
   return (
     <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">
-      <h1 className="text-xl font-bold text-foreground">Marché</h1>
-
       <Tabs defaultValue="buy" className="flex-1">
         <TabsList className="grid w-full grid-cols-2 bg-muted">
           <TabsTrigger value="buy">Acheter</TabsTrigger>

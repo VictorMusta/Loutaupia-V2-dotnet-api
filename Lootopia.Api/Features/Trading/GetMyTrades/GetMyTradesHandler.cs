@@ -16,6 +16,8 @@ public sealed class GetMyTradesHandler(LootopiaDbContext db) : IRequestHandler<G
             .Where(t => t.InitiatorId == request.UserId || t.ReceiverId == request.UserId)
             .Include(t => t.Items)
             .ThenInclude(i => i.Item)
+            .Include(t => t.Initiator)
+            .Include(t => t.Receiver)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(request.Status))
@@ -32,7 +34,9 @@ public sealed class GetMyTradesHandler(LootopiaDbContext db) : IRequestHandler<G
         var dtos = offers.Select(t => new TradeOfferDto(
             t.Id,
             t.InitiatorId,
+            t.Initiator?.DisplayName,
             t.ReceiverId,
+            t.Receiver?.DisplayName,
             t.Status,
             t.ExpiresAt,
             t.CreatedAt,
