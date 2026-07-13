@@ -9,7 +9,9 @@ public record GetMyTradesResponse(
 public record TradeOfferDto(
     Guid Id,
     Guid InitiatorId,
+    string? InitiatorName,
     Guid ReceiverId,
+    string? ReceiverName,
     string Status,
     DateTime ExpiresAt,
     DateTime CreatedAt,

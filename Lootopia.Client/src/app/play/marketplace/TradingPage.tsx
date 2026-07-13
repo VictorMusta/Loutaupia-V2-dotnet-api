@@ -54,7 +54,7 @@ export function TradingPage() {
 
   const createMutation = useMutation({
     mutationFn: () =>
-      tradingApi.create(toUserId, offeredIds, requestedIds),
+      tradingApi.create(toUserId.trim(), offeredIds, requestedIds),
     onSuccess: () => {
       setToUserId("");
       setOfferedIds([]);
@@ -104,7 +104,7 @@ export function TradingPage() {
   return (
     <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-foreground">Échanges</h1>
+        <h2 className="text-lg font-semibold text-foreground">Offres en cours</h2>
         <Button
           size="sm"
           className="bg-primary hover:bg-primary/90"
