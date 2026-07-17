@@ -3,6 +3,7 @@ using Lootopia.Api.Domain.Enums;
 using Lootopia.Api.Infrastructure.Persistence;
 using Lootopia.Api.SharedKernel.Results;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Lootopia.Api.Infrastructure.Services;
 
@@ -18,22 +19,26 @@ public sealed class WalletService(LootopiaDbContext db) : IWalletService
         if (amount <= 0)
             return Result.Failure(Error.Custom("Wallet.InvalidAmount", "Amount must be positive."));
 
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var ownsTransaction = db.Database.CurrentTransaction is null;
+        IDbContextTransaction? transaction = null;
+        if (ownsTransaction)
+            transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         try
         {
-        var wallet = await db.Wallets.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
-        if (wallet is null)
-        {
-            wallet = new Wallet
+            var wallet = await db.Wallets.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
+            if (wallet is null)
             {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                Balance = 0,
-                Currency = "LTK",
-                UpdatedAt = DateTime.UtcNow
-            };
-            db.Wallets.Add(wallet);
-        }
+                wallet = new Wallet
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    Balance = 0,
+                    Currency = "LTK",
+                    UpdatedAt = DateTime.UtcNow
+                };
+                db.Wallets.Add(wallet);
+            }
 
             if (!string.IsNullOrEmpty(idempotencyKey))
             {
@@ -41,7 +46,8 @@ public sealed class WalletService(LootopiaDbContext db) : IWalletService
                     .AnyAsync(t => t.IdempotencyKey == idempotencyKey, cancellationToken);
                 if (existing)
                 {
-                    await transaction.CommitAsync(cancellationToken);
+                    if (ownsTransaction)
+                        await transaction!.CommitAsync(cancellationToken);
                     return Result.Success();
                 }
             }
@@ -62,14 +68,21 @@ public sealed class WalletService(LootopiaDbContext db) : IWalletService
             wallet.UpdatedAt = DateTime.UtcNow;
 
             await db.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            if (ownsTransaction)
+                await transaction!.CommitAsync(cancellationToken);
 
             return Result.Success();
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (ownsTransaction)
+                await transaction!.RollbackAsync(cancellationToken);
             throw;
+        }
+        finally
+        {
+            if (ownsTransaction && transaction is not null)
+                await transaction.DisposeAsync();
         }
     }
 
@@ -83,7 +96,11 @@ public sealed class WalletService(LootopiaDbContext db) : IWalletService
         if (amount <= 0)
             return Result.Failure(Error.Custom("Wallet.InvalidAmount", "Amount must be positive."));
 
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var ownsTransaction = db.Database.CurrentTransaction is null;
+        IDbContextTransaction? transaction = null;
+        if (ownsTransaction)
+            transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         try
         {
             var wallet = await db.Wallets.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
@@ -99,7 +116,8 @@ public sealed class WalletService(LootopiaDbContext db) : IWalletService
                     .AnyAsync(t => t.IdempotencyKey == idempotencyKey, cancellationToken);
                 if (existing)
                 {
-                    await transaction.CommitAsync(cancellationToken);
+                    if (ownsTransaction)
+                        await transaction!.CommitAsync(cancellationToken);
                     return Result.Success();
                 }
             }
@@ -120,14 +138,21 @@ public sealed class WalletService(LootopiaDbContext db) : IWalletService
             wallet.UpdatedAt = DateTime.UtcNow;
 
             await db.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            if (ownsTransaction)
+                await transaction!.CommitAsync(cancellationToken);
 
             return Result.Success();
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (ownsTransaction)
+                await transaction!.RollbackAsync(cancellationToken);
             throw;
+        }
+        finally
+        {
+            if (ownsTransaction && transaction is not null)
+                await transaction.DisposeAsync();
         }
     }
 
@@ -145,7 +170,11 @@ public sealed class WalletService(LootopiaDbContext db) : IWalletService
         if (fromUserId == toUserId)
             return Result.Failure(Error.Custom("Wallet.InvalidTransfer", "Cannot transfer to the same user."));
 
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var ownsTransaction = db.Database.CurrentTransaction is null;
+        IDbContextTransaction? transaction = null;
+        if (ownsTransaction)
+            transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         try
         {
             var debitResult = await DebitAsync(fromUserId, amount, reason, idempotencyKey, cancellationToken);
@@ -158,18 +187,22 @@ public sealed class WalletService(LootopiaDbContext db) : IWalletService
 
             var creditResult = await CreditAsync(toUserId, amount, reason, creditIdempotencyKey, cancellationToken);
             if (creditResult.IsFailure)
-            {
-                await transaction.RollbackAsync(cancellationToken);
                 return creditResult;
-            }
 
-            await transaction.CommitAsync(cancellationToken);
+            if (ownsTransaction)
+                await transaction!.CommitAsync(cancellationToken);
             return Result.Success();
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (ownsTransaction)
+                await transaction!.RollbackAsync(cancellationToken);
             throw;
+        }
+        finally
+        {
+            if (ownsTransaction && transaction is not null)
+                await transaction.DisposeAsync();
         }
     }
 }
