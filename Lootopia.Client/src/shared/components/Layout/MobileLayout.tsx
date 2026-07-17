@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Map, Backpack, Store, Trophy, User, Wallet, Bell, LogOut } from "lucide-react";
 import { useAuth } from "@/shared/providers/AuthProvider";
 import { walletApi } from "@/shared/api/wallet";
+import { notificationsApi } from "@/shared/api/notifications";
 import { cn, formatCurrency } from "@/shared/lib/utils";
 
 const navItems = [
@@ -22,6 +23,15 @@ export function MobileLayout() {
     enabled: !!user,
   });
 
+  const { data: notifications } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: () => notificationsApi.list(),
+    enabled: !!user,
+    refetchInterval: 30_000,
+  });
+
+  const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;
+
   return (
     <div className="flex flex-col h-dvh bg-background">
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
@@ -40,6 +50,11 @@ export function MobileLayout() {
           </NavLink>
           <NavLink to="/play/notifications" className="relative">
             <Bell className="h-5 w-5 text-muted-foreground" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </NavLink>
           {user && (
             <>

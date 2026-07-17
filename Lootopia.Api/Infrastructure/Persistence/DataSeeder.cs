@@ -86,7 +86,7 @@ public static class DataSeeder
                 IsActive = true
             };
             context.Users.Add(playerUser);
-            context.Wallets.Add(new Wallet { Id = Guid.NewGuid(), UserId = playerUser.Id, Balance = 100 });
+            context.Wallets.Add(new Wallet { Id = Guid.NewGuid(), UserId = playerUser.Id, Balance = 5000 });
         }
 
         await context.SaveChangesAsync();
@@ -296,8 +296,8 @@ public static class DataSeeder
         var auction2Id = Guid.NewGuid();
 
         context.Auctions.AddRange(
-            new Auction { Id = auction1Id, SellerId = Player2Id, ItemId = items[2].Id, ReservePrice = 200, MinIncrement = 50, StartTime = now.AddDays(-1), EndTime = now.AddDays(2), Status = "Active", CreatedAt = now.AddDays(-1) },
-            new Auction { Id = auction2Id, SellerId = Player4Id, ItemId = items[11].Id, ReservePrice = 500, MinIncrement = 100, StartTime = now.AddHours(-6), EndTime = now.AddDays(5), Status = "Active", CreatedAt = now.AddHours(-6) }
+            new Auction { Id = auction1Id, SellerId = Player2Id, ItemId = items[2].Id, ReservePrice = 200, MinIncrement = 50, StartTime = now.AddDays(-1), EndTime = now.AddDays(7), Status = "Active", CreatedAt = now.AddDays(-1) },
+            new Auction { Id = auction2Id, SellerId = Player4Id, ItemId = items[11].Id, ReservePrice = 500, MinIncrement = 100, StartTime = now.AddHours(-6), EndTime = now.AddDays(14), Status = "Active", CreatedAt = now.AddHours(-6) }
         );
         await context.SaveChangesAsync();
 
@@ -417,4 +417,23 @@ public static class DataSeeder
         Id = Guid.NewGuid(), PlayerId = playerId, Scope = scope,
         Period = period, Metric = metric, Score = score, Rank = rank, CalculatedAt = DateTime.UtcNow
     };
+
+    /// <summary>
+    /// Keeps demo auctions visible in dev when seed end times have passed.
+    /// </summary>
+    public static async Task EnsureActiveAuctionsAsync(LootopiaDbContext context)
+    {
+        var now = DateTime.UtcNow;
+        var expired = await context.Auctions
+            .Where(a => a.Status == "Active" && a.EndTime <= now)
+            .ToListAsync();
+
+        if (expired.Count == 0)
+            return;
+
+        foreach (var auction in expired)
+            auction.EndTime = now.AddDays(7);
+
+        await context.SaveChangesAsync();
+    }
 }

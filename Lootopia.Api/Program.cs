@@ -11,6 +11,7 @@ using Lootopia.Api.Features.Items;
 using Lootopia.Api.Features.Partners;
 using Lootopia.Api.Features.Hunts;
 using Lootopia.Api.Features.Leaderboards;
+using Lootopia.Api.Features.Notifications;
 using Lootopia.Api.Features.Achievements;
 using Lootopia.Api.Features.Marketplace;
 using Lootopia.Api.Features.Trading;
@@ -131,6 +132,7 @@ using (var scope = app.Services.CreateScope())
     await DataSeeder.SeedAsync(db);
     await DataSeeder.SeedAchievementsAsync(db);
     await DataSeeder.SeedTestDataAsync(db);
+    await DataSeeder.EnsureActiveAuctionsAsync(db);
 }
 
 // --- Health Check Endpoint ---
@@ -178,6 +180,9 @@ app.MapAchievementEndpoints();
 
 // --- Leaderboard Endpoints ---
 app.MapLeaderboardEndpoints();
+
+// --- Notification Endpoints ---
+app.MapNotificationEndpoints();
 
 // --- SPA Fallback Routing ---
 app.MapFallbackToFile("index.html");
