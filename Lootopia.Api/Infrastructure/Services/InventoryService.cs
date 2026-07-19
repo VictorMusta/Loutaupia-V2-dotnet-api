@@ -3,6 +3,7 @@ using Lootopia.Api.Domain.Enums;
 using Lootopia.Api.Infrastructure.Persistence;
 using Lootopia.Api.SharedKernel.Results;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Lootopia.Api.Infrastructure.Services;
 
@@ -22,7 +23,11 @@ public sealed class InventoryService(LootopiaDbContext db) : IInventoryService
         if (item is null)
             return Result.Failure(Error.Custom("Inventory.ItemNotFound", "Item not found."));
 
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var ownsTransaction = db.Database.CurrentTransaction is null;
+        IDbContextTransaction? transaction = null;
+        if (ownsTransaction)
+            transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         try
         {
             var existing = await db.PlayerInventories
@@ -46,13 +51,20 @@ public sealed class InventoryService(LootopiaDbContext db) : IInventoryService
             }
 
             await db.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            if (ownsTransaction)
+                await transaction!.CommitAsync(cancellationToken);
             return Result.Success();
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (ownsTransaction)
+                await transaction!.RollbackAsync(cancellationToken);
             throw;
+        }
+        finally
+        {
+            if (ownsTransaction && transaction is not null)
+                await transaction.DisposeAsync();
         }
     }
 
@@ -65,7 +77,11 @@ public sealed class InventoryService(LootopiaDbContext db) : IInventoryService
         if (quantity <= 0)
             return Result.Failure(Error.Custom("Inventory.InvalidQuantity", "Quantity must be positive."));
 
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var ownsTransaction = db.Database.CurrentTransaction is null;
+        IDbContextTransaction? transaction = null;
+        if (ownsTransaction)
+            transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         try
         {
             var existing = await db.PlayerInventories
@@ -82,13 +98,20 @@ public sealed class InventoryService(LootopiaDbContext db) : IInventoryService
                 db.PlayerInventories.Remove(existing);
 
             await db.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            if (ownsTransaction)
+                await transaction!.CommitAsync(cancellationToken);
             return Result.Success();
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (ownsTransaction)
+                await transaction!.RollbackAsync(cancellationToken);
             throw;
+        }
+        finally
+        {
+            if (ownsTransaction && transaction is not null)
+                await transaction.DisposeAsync();
         }
     }
 
@@ -109,7 +132,11 @@ public sealed class InventoryService(LootopiaDbContext db) : IInventoryService
         if (item is null)
             return Result.Failure(Error.Custom("Inventory.ItemNotFound", "Item not found."));
 
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var ownsTransaction = db.Database.CurrentTransaction is null;
+        IDbContextTransaction? transaction = null;
+        if (ownsTransaction)
+            transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         try
         {
             var fromInv = await db.PlayerInventories
@@ -141,13 +168,20 @@ public sealed class InventoryService(LootopiaDbContext db) : IInventoryService
             }
 
             await db.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            if (ownsTransaction)
+                await transaction!.CommitAsync(cancellationToken);
             return Result.Success();
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (ownsTransaction)
+                await transaction!.RollbackAsync(cancellationToken);
             throw;
+        }
+        finally
+        {
+            if (ownsTransaction && transaction is not null)
+                await transaction.DisposeAsync();
         }
     }
 }
